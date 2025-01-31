@@ -24,6 +24,8 @@ dependencies = [
     "pydantic-core==2.27.2",
     "sniffio==1.3.1",
     "typing-extensions==4.12.2",
+    "djangorestframework-simplejwt==5.4.0",
+    "pyjwt==2.10.1",
 ]
 
 [build-system]

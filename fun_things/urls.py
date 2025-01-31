@@ -16,9 +16,18 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
-from fun_things.core.views import random_activity
+from fun_things.core.views import (
+    random_activity, 
+    register_user, 
+    login_user, 
+    get_profile
+)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('core/random-activity/', random_activity, name='random_activity'),
+    path('core/register/', register_user, name='register_user'),
+    path('core/login/', login_user, name='login_user'),
+    path('core/profile/', get_profile, name='get_profile'),
 ]
+
