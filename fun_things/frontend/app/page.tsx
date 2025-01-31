@@ -1,6 +1,6 @@
-"use client"; // Ensures client-side rendering for interactivity
+"use client"; // Ensures client-side rendering
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
 import ThingCard from "./components/ThingCard";
 
@@ -12,12 +12,15 @@ interface Activity {
   url?: string;
   image_url?: string;
   hashtags?: string[];
+  pets_allowed?: boolean;
+  accessibility?: boolean;
 }
 
 export default function Home() {
   const [activity, setActivity] = useState<Activity | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true); // Start in loading state
 
+  // Fetch a random activity
   const fetchRandomActivity = async () => {
     setLoading(true);
     try {
@@ -28,6 +31,11 @@ export default function Home() {
     }
     setLoading(false);
   };
+
+  // Load an initial activity when the component mounts
+  useEffect(() => {
+    fetchRandomActivity();
+  }, []);
 
   return (
     <div className="min-h-screen flex flex-col items-center bg-gray-100 p-6">
@@ -42,16 +50,8 @@ export default function Home() {
         {loading ? (
           <p className="text-gray-500 text-lg">Loading...</p>
         ) : (
-          activity && <ThingCard thing={activity} />
+          activity && <ThingCard thing={activity} onNextActivity={fetchRandomActivity} />
         )}
-
-        {/* Action Button */}
-        <button
-          onClick={fetchRandomActivity}
-          className="mt-6 bg-blue-600 text-white px-6 py-3 rounded-lg shadow-md hover:bg-blue-700 transition"
-        >
-          Show Another Activity
-        </button>
       </main>
 
       {/* FOOTER */}

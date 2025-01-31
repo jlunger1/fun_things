@@ -1,6 +1,7 @@
 import os
 import requests
 import openai
+import re
 from dotenv import load_dotenv
 from tqdm import tqdm
 from django.db.utils import IntegrityError
@@ -12,9 +13,8 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 import django
 django.setup()
-from fun_things.core.models import NPSThingToDo
 
-import re
+from fun_things.core.models import NPSThingToDo
 
 class NPSScraper:
     """Scraper to fetch and store 'things to do' from the NPS API."""
@@ -25,17 +25,26 @@ class NPSScraper:
         self.headers = {"X-Api-Key": NPS_API_KEY}
         openai.api_key = OPENAI_API_KEY
 
-    def get_things_to_do(self, limit=100):
+    def get_things_to_do(self, limit=10):
         """Fetch 'things to do' from the NPS API."""
         url = f"{self.BASE_URL}/thingstodo"
         params = {"limit": limit}
-        response = requests.get(url, headers=self.headers)
-
+        response = requests.get(url, headers=self.headers, params=params)
+        
         if response.status_code == 200:
             return response.json().get("data", [])
         else:
             print(f"Error fetching things to do: {response.status_code} - {response.text}")
             return []
+
+    def clean_description(self, text):
+        """Cleans up unwanted characters from descriptions."""
+        if not text:
+            return "No description available."
+        text = re.sub(r"</?p>", "", text)  # Remove <p> and </p> tags
+        text = text.replace("---", "").strip()  # Remove "---"
+        text = re.sub(r"\s+", " ", text)  # Normalize excessive spaces
+        return text
 
     def rewrite_description(self, original_text):
         """Use GPT-4 to improve the description formatting."""
@@ -43,18 +52,27 @@ class NPSScraper:
             return "No description available."
 
         prompt = f"""
-        Here is a poorly formatted description of an activity:
+        Here is a description of an activity:
         ---
         {original_text}
         ---
-        Rewrite it to be concise, engaging, and well-formatted for a website about fun things to do.
+        Summarize this text in a concise and engaging way.
+
+        The summary should be clean so that it will look nice on a website.
+        It should not include any characters that look like html code, make sure it's easy to read, 
+        do not include symbols like "---" or "#", and ensure it's concise and engaging.
+        Do not include phone numbers or email addresses. Format it so it would look nice in a textbook.
+        
+        Keep the text to under 200 words.
         """
 
         try:
             response = openai.chat.completions.create(
                 model="gpt-4",
-                messages=[{"role": "system", "content": "You are an expert copywriter."},
-                          {"role": "user", "content": prompt}],
+                messages=[
+                    {"role": "system", "content": "You are an expert copywriter."},
+                    {"role": "user", "content": prompt}
+                ],
                 max_tokens=500
             )
             return response.choices[0].message.content.strip()
@@ -62,56 +80,78 @@ class NPSScraper:
             print(f"Error rewriting description: {e}")
             return original_text  # Fallback to original
         
-    import re
-
-    def clean_description(text):
-        """Cleans up unwanted characters from descriptions."""
-        if not text:
+    def is_accessible(self, original_text):
+        """Use GPT-4 to determine if accessible."""
+        if not original_text:
             return "No description available."
 
-        text = re.sub(r"</?p>", "", text)  # Remove <p> and </p> tags
-        text = text.replace("---", "").strip()  # Remove "---"
-        text = re.sub(r"\s+", " ", text)  # Normalize excessive spaces
-        return text
+        prompt = f"""
+        Here is a description of accessibility:
+        ---
+        {original_text}
+        ---
+        Is the activity accessible to all visitors? if yes answer "Yes", if no answer "No".
+        """
 
+        try:
+            response = openai.chat.completions.create(
+                model="gpt-4",
+                messages=[
+                    {"role": "system", "content": "You are an expert copywriter."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=500
+            )
+            return response.choices[0].message.content.strip()
+        except Exception as e:
+            print(f"Error assessing accessibility: {e}")
 
     def store_things_to_do(self):
-        """Fetch and store 'things to do' with better location parsing."""
+        """Fetch and store 'things to do' with complete field mapping."""
         print('Fetching things to do...')
         things_to_do = self.get_things_to_do()
 
-        for thing in things_to_do:
+        print(f'Found {len(things_to_do)} things to do.')
+
+        for thing in tqdm(things_to_do, total=len(things_to_do)):
             thing_id = thing.get("id")
+
             if not thing_id:
+                print(f"Skipping due to missing ID for {thing.get('title')}")
                 continue
 
-            # Extracting better location data
-            latitude = thing.get("latitude")
-            longitude = thing.get("longitude")
-            park_name = thing.get("relatedParks", [{}])
-            if park_name:
-                park_name = park_name[0].get("title")
-            location_desc = thing.get("locationDescription", "").split("<br")[0]  # Clean HTML tags
+            if NPSThingToDo.objects.filter(nps_id=str(thing_id)).exists():
+                print(f"Skipping existing thing to do: {thing.get('title')}")
+                continue
 
-            if not latitude or not longitude:
-                print(f"⚠️ Missing coordinates for {thing.get('title')}, using park name.")
+            original_description = thing.get("longDescription", "")
+            better_description = self.rewrite_description(original_description)
+            better_description = self.clean_description(better_description)
+
+            accessibility = thing.get("accessibilityInformation", "")
+            accessibility = self.is_accessible(accessibility)
 
             try:
-                NPSThingToDo.objects.update_or_create(
+                obj = NPSThingToDo.objects.create(
                     nps_id=str(thing_id),
-                    defaults={
-                        "title": thing.get("title"),
-                        "description": thing.get("shortDescription", ""),
-                        "url": thing.get("url", ""),
-                        "image_url": thing.get("images", [{}])[0].get("url", ""),
-                        "location": park_name or location_desc,  # Use best available location
-                        "latitude": latitude if latitude else None,
-                        "longitude": longitude if longitude else None,
-                        "raw_data": thing,
-                    }
+                    title=thing.get("title", "Unknown"),
+                    description=better_description,
+                    url=thing.get("url", ""),
+                    image_url=thing.get("images", [{}])[0].get("url", ""),
+                    latitude=thing.get("latitude") if thing.get("latitude") else None,
+                    longitude=thing.get("longitude") if thing.get("longitude") else None,
+                    tags=[tag for tag in thing.get("tags", [])],
+                    topics=[topic["name"] for topic in thing.get("topics", [])],
+                    activities=[activity["name"] for activity in thing.get("activities", [])],
+                    season=", ".join(thing.get("season", [])) if thing.get("season") else None,
+                    age_recommendation=thing.get("ageDescription", ""),
+                    accessibility=accessibility,
+                    pets_allowed=thing.get("arePetsPermitted", "").lower() == "true",
+                    raw_data=thing,
                 )
+                print(f"Added new thing to do: {thing.get('title')}")
             except IntegrityError as e:
-                print(f"Skipping duplicate: {thing.get('title')} (Error: {e})")
+                print(f"Skipped duplicate thing to do: {thing.get('title')} (Error: {e})")
 
 
 if __name__ == "__main__":

@@ -9,7 +9,6 @@ class NPSThingToDo(models.Model):
     url = models.URLField(blank=True, null=True)
     image_url = models.URLField(blank=True, null=True)
 
-    location = models.CharField(max_length=255, blank=True, null=True)
     latitude = models.FloatField(blank=True, null=True)
     longitude = models.FloatField(blank=True, null=True)
 

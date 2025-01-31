@@ -1,72 +1,71 @@
-export default function ThingCard({ thing }) {
+import { useState } from "react";
+import { Favorite, FavoriteBorder, ThumbUp, ThumbDown } from "@mui/icons-material";
+import { MdAccessible } from "react-icons/md"; // Accessibility icon
+import { FaPaw } from "react-icons/fa"; // White paw icon
+
+export default function ThingCard({ thing, onNextActivity }) {
+  const [saved, setSaved] = useState(false);
+
   return (
-    <div className="w-full bg-white rounded-xl shadow-lg p-4 flex flex-col items-center">
-      {/* Image - Ensure full visibility */}
-      {thing.image_url ? (
-        <img
-          src={thing.image_url}
-          alt={thing.title}
-          className="w-full max-h-64 object-contain rounded-md"
-        />
-      ) : (
-        <div className="w-full h-64 bg-gray-300 rounded-md flex items-center justify-center text-gray-500">
-          No Image Available
+    <div className="relative w-full max-w-3xl bg-white rounded-2xl shadow-lg overflow-hidden">
+      {/* Image with Title Overlay & Icons */}
+      <div className="relative w-full h-[50vh] md:h-[60vh]">
+        {thing.image_url ? (
+          <img
+            src={thing.image_url}
+            alt={thing.title}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div className="w-full h-full bg-gray-300 flex items-center justify-center text-gray-500">
+            No Image Available
+          </div>
+        )}
+
+        {/* Floating Icons - Top Right */}
+        <div className="absolute top-4 right-4 flex flex-col items-center gap-5">
+          {/* Favorite (Heart) Button - MUI with Black Shadow */}
+          <button
+            className="hover:scale-110 transition text-white drop-shadow-lg shadow-black"
+            onClick={() => setSaved(!saved)}
+          >
+            {saved ? <Favorite fontSize="large" className="drop-shadow-lg shadow-black" /> : <FavoriteBorder fontSize="large" className="drop-shadow-lg shadow-black" />}
+          </button>
+
+          {/* Upvote Button - MUI (Triggers Next Activity) */}
+          <button className="hover:scale-110 transition text-white drop-shadow-lg shadow-black" onClick={onNextActivity}>
+            <ThumbUp fontSize="large" className="drop-shadow-lg shadow-black" />
+          </button>
+
+          {/* Downvote Button - MUI (Triggers Next Activity) */}
+          <button className="hover:scale-110 transition text-white drop-shadow-lg shadow-black" onClick={onNextActivity}>
+            <ThumbDown fontSize="large" className="drop-shadow-lg shadow-black" />
+          </button>
         </div>
-      )}
 
-      {/* Title - Clickable Link */}
-      <h2 className="text-xl font-bold mt-3 text-center">
-        <a
-          href={thing.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-blue-600 hover:underline"
-        >
-          {thing.title}
-        </a>
-      </h2>
+        {/* Title Overlay */}
+        <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/80 to-transparent p-4">
+          <h2 className="text-white text-2xl font-bold drop-shadow-lg shadow-black">
+            <a href={thing.url} target="_blank" rel="noopener noreferrer" className="hover:underline">
+              {thing.title}
+            </a>
+          </h2>
+        </div>
 
-      {/* Location */}
-      {thing.location && (
-        <p className="text-gray-500 text-sm mt-1">
-          📍 <strong>Location:</strong> {thing.location}
-        </p>
-      )}
+        {/* Description Overlay (Appears on Hover, Stays Left) */}
+        <div className="absolute inset-y-0 left-0 w-2/3 bg-black/70 text-white opacity-0 hover:opacity-100 transition-opacity duration-300 flex items-center justify-center p-6">
+          <div className="max-h-[60%] overflow-y-auto text-left pr-4">
+            <p className="text-lg drop-shadow-lg shadow-black">{thing.description}</p>
+          </div>
+        </div>
 
-      {/* Age Recommendation */}
-      {thing.age_recommendation && (
-        <p className="text-gray-500 text-sm mt-1">
-          👶 <strong>Recommended Age:</strong> {thing.age_recommendation}
-        </p>
-      )}
-
-      {/* Accessibility */}
-      {thing.accessibility && (
-        <p className="text-gray-500 text-sm mt-1">
-          ♿ <strong>Accessibility:</strong> {thing.accessibility}
-        </p>
-      )}
-
-      {/* Pets Allowed */}
-      <p className="text-gray-500 text-sm mt-1">
-        🐾 <strong>Pets Allowed:</strong> {thing.pets_allowed ? "Yes" : "No"}
-      </p>
-
-      {/* Description */}
-      <p className="text-gray-600 mt-3 text-center">{thing.description}</p>
-
-      {/* Tags & Topics */}
-      <div className="mt-2 flex flex-wrap gap-2 justify-center">
-        {thing.activities?.map((activity) => (
-          <span key={activity} className="bg-green-100 text-green-700 text-sm px-2 py-1 rounded-lg">
-            {activity}
-          </span>
-        ))}
-        {thing.topics?.map((topic) => (
-          <span key={topic} className="bg-blue-100 text-blue-700 text-sm px-2 py-1 rounded-lg">
-            {topic}
-          </span>
-        ))}
+        {/* Accessibility & Pets Icons (Bottom Right) */}
+        {(thing.pets_allowed || thing.accessibility) && (
+          <div className="absolute bottom-4 right-4 flex gap-3 text-white drop-shadow-lg shadow-black">
+            {thing.pets_allowed && <FaPaw className="text-4xl drop-shadow-lg shadow-black" />}
+            {thing.accessibility && <MdAccessible className="text-4xl drop-shadow-lg shadow-black" />}
+          </div>
+        )}
       </div>
     </div>
   );
