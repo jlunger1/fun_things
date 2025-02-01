@@ -9,18 +9,10 @@ from django.db import models
 
 class CustomUser(AbstractUser):
     """Custom user model storing login, location, saved activities, and votes."""
-    
-    email = models.EmailField(unique=True)
-    city = models.CharField(max_length=255, blank=True, null=True)  # User-supplied location
-    latitude = models.FloatField(blank=True, null=True)  # Estimated latitude
-    longitude = models.FloatField(blank=True, null=True)  # Estimated longitude
+    firebase_id = models.CharField(max_length=255, blank=True, null=True)
     saved_activities = models.ManyToManyField("NPSThingToDo", blank=True, related_name="saved_by_users")
     thumbs_up = models.ManyToManyField("NPSThingToDo", blank=True, related_name="liked_by_users")
     thumbs_down = models.ManyToManyField("NPSThingToDo", blank=True, related_name="disliked_by_users")
-
-    # Fix conflicting related names
-    groups = models.ManyToManyField(Group, related_name="customuser_groups", blank=True)
-    user_permissions = models.ManyToManyField(Permission, related_name="customuser_permissions", blank=True)
 
     def __str__(self):
         return self.username

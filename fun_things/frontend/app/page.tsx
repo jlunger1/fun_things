@@ -5,8 +5,9 @@ import axios from "axios";
 import ThingCard from "./components/ThingCard";
 import Profile from "./components/Profile";
 import AddContent from "./components/AddContent";
-import Register from "./components/Register";
+import FirebaseAuth from "./components/FirebaseAuth"; // ✅ Import FirebaseUI modal
 import { Home, AccountCircle, AddBox } from "@mui/icons-material";
+import { auth } from "./utils/firebase"; // ✅ Import Firebase Auth
 
 interface Activity {
   id: number;
@@ -24,22 +25,15 @@ export default function HomePage() {
   const [activity, setActivity] = useState<Activity | null>(null);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState("home");
-  const [showRegister, setShowRegister] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(
-    typeof window !== "undefined" && !!localStorage.getItem("access_token")
-  );
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  // ✅ Only check localStorage on the client
+  // ✅ Check Firebase auth state
   useEffect(() => {
-    const checkAuth = () => {
-      setIsLoggedIn(!!localStorage.getItem("access_token"));
-    };
-  
-    checkAuth(); // Run immediately
-  
-    // Listen for storage changes (e.g., another tab logs out)
-    window.addEventListener("storage", checkAuth);
-    return () => window.removeEventListener("storage", checkAuth);
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      setIsLoggedIn(!!user);
+    });
+    return () => unsubscribe(); // Cleanup listener
   }, []);
 
   // Fetch a random activity
@@ -62,16 +56,16 @@ export default function HomePage() {
   // Handles clicks that require login
   const handleProtectedClick = (viewName: string) => {
     if (!isLoggedIn) {
-      setShowRegister(true);
+      setShowAuthModal(true);
     } else {
       setView(viewName);
     }
   };
 
-  // ✅ Called when a user successfully logs in or registers
+  // ✅ Called when user logs in successfully via FirebaseAuth
   const handleAuthSuccess = () => {
     setIsLoggedIn(true);
-    setShowRegister(false); // Close modal
+    setShowAuthModal(false); // Close modal
   };
 
   return (
@@ -106,23 +100,21 @@ export default function HomePage() {
                 thing={activity}
                 onNextActivity={fetchRandomActivity}
                 isLoggedIn={isLoggedIn}
-                onRequireLogin={() => setShowRegister(true)}
-                showRegister={showRegister}
+                onRequireLogin={() => setShowAuthModal(true)}
+                showRegister={showAuthModal}
               />
             )
           )}
         </main>
       )}
 
-      {view === "profile" && <Profile onLogin={() => setShowRegister(true)} />} {/* Profile Page */}
-      {view === "add" && <AddContent />} {/* Add Content Page */}
+      {view === "profile" && <Profile onLogin={() => setShowAuthModal(true)} />}
+      {view === "add" && <AddContent />}
 
-      {/* Register/Login Modal */}
-      {showRegister && (
+      {/* FirebaseAuth Modal for Login/Signup */}
+      {showAuthModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-          <div className="bg-white p-6 rounded-lg shadow-2xl">
-            <Register onClose={() => setShowRegister(false)} onAuthSuccess={handleAuthSuccess} />
-          </div>
+          <FirebaseAuth onClose={() => setShowAuthModal(false)} onAuthSuccess={handleAuthSuccess} />
         </div>
       )}
 
