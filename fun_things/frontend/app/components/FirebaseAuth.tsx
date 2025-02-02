@@ -34,9 +34,9 @@ export default function FirebaseAuth({ onClose, onAuthSuccess }: FirebaseAuthPro
       const token = await userCredential.user.getIdToken();
 
       // ✅ Send token to Django for authentication
-      // const res = await axios.post("http://127.0.0.1:8000/core/register-or-login/", {}, {
-      //  headers: { Authorization: `Bearer ${token}` },
-      // });
+      const res = await axios.post("http://127.0.0.1:8000/core/register-or-login/", {}, {
+      headers: { Authorization: `Bearer ${token}` },
+      });
 
       // ✅ Store user details in local state
       onAuthSuccess(res.data);

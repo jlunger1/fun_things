@@ -7,11 +7,16 @@ from django.contrib.auth import get_user_model
 import firebase_admin
 from firebase_admin import auth
 from firebase_admin import credentials
+import os
+
+# get the absolute path of the current file
+dir_path = os.path.dirname(os.path.realpath(__file__))
+FIREBASE_CREDENTIALS_PATH = os.path.join(dir_path, "fun-things-12caf-firebase-adminsdk-fbsvc-abf05155d3.json")
 
 # Initialize Firebase Admin SDK (only do this once in your project)
 if not firebase_admin._apps:
-    cred = credentials.Certificate("path/to/your/serviceAccountKey.json")
-    firebase_admin.initialize_app()
+    cred = credentials.Certificate(FIREBASE_CREDENTIALS_PATH)
+    firebase_admin.initialize_app(cred)
 
 User = get_user_model()  # Reference CustomUser
 
@@ -27,7 +32,6 @@ def register_or_login(request):
         return JsonResponse({"error": "Missing token"}, status=401)
 
     token = auth_header.split("Bearer ")[1]
-    print(f"Received Firebase Token: {token}")  # ✅ Log the token
 
     try:
         decoded_token = auth.verify_id_token(token)  # Ensure `auth` is from firebase_admin.auth
