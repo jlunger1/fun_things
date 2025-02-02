@@ -3,10 +3,14 @@
 import { useEffect, useState } from "react";
 import { auth } from "../utils/firebase";
 import { EmailAuthProvider, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
-import "firebaseui/dist/firebaseui.css"; // Keep FirebaseUI styles
 import axios from "axios";
 
-export default function FirebaseAuth({ onClose, onAuthSuccess }) {
+interface FirebaseAuthProps {
+  onClose: () => void;
+  onAuthSuccess: (userData: any) => void; // Updated to receive user data
+}
+
+export default function FirebaseAuth({ onClose, onAuthSuccess }: FirebaseAuthProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSignUp, setIsSignUp] = useState(false); // Track Sign-In vs Sign-Up
@@ -26,20 +30,19 @@ export default function FirebaseAuth({ onClose, onAuthSuccess }) {
         userCredential = await signInWithEmailAndPassword(auth, email, password);
       }
 
-      // ✅ Get Firebase token
+      // ✅ Get Firebase ID Token
       const token = await userCredential.user.getIdToken();
 
-      // ✅ Send token to Django for registration/login
-      // try {
-      //  await axios.post("http://127.0.0.1:8000/core/register-or-login/", {}, {
-      //    headers: { Authorization: `Bearer ${token}` },
-      //  });
-      // } catch (error) {
-      //  console.error("❌ Error registering user in Django:", error);
-      // }
+      // ✅ Send token to Django for authentication
+      // const res = await axios.post("http://127.0.0.1:8000/core/register-or-login/", {}, {
+      //  headers: { Authorization: `Bearer ${token}` },
+      // });
 
-      onAuthSuccess(); // Notify parent that authentication succeeded
-      onClose(); // Close modal
+      // ✅ Store user details in local state
+      onAuthSuccess(res.data);
+
+      // ✅ Close modal
+      onClose();
     } catch (error: any) {
       setError(error.message);
     }

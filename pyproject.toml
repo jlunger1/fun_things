@@ -53,6 +53,7 @@ dependencies = [
     "rsa==4.9",
     "uritemplate==4.1.1",
     "firebase==4.0.1",
+    "firebase-admin==6.6.0",
 ]
 
 [build-system]

@@ -18,10 +18,12 @@ from django.contrib import admin
 from django.urls import path
 from fun_things.core.views import (
     random_activity, 
+    register_or_login,
 )
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('core/random-activity/', random_activity, name='random_activity'),
+    path('core/register-or-login/', register_or_login, name='register_or_login'),
 ]
 

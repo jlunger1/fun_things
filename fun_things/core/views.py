@@ -1,6 +1,49 @@
 import random
 from django.http import JsonResponse
-from fun_things.core.models import NPSThingToDo
+from fun_things.core.models import NPSThingToDo, CustomUser
+
+from django.views.decorators.csrf import csrf_exempt
+from django.contrib.auth import get_user_model
+import firebase_admin
+from firebase_admin import auth
+from firebase_admin import credentials
+
+# Initialize Firebase Admin SDK (only do this once in your project)
+if not firebase_admin._apps:
+    cred = credentials.Certificate("path/to/your/serviceAccountKey.json")
+    firebase_admin.initialize_app()
+
+User = get_user_model()  # Reference CustomUser
+
+
+@csrf_exempt
+def register_or_login(request):
+    """Verifies Firebase token and registers/logs in the user in Django DB."""
+    if request.method != "POST":
+        return JsonResponse({"error": "Invalid request"}, status=400)
+
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        return JsonResponse({"error": "Missing token"}, status=401)
+
+    token = auth_header.split("Bearer ")[1]
+    print(f"Received Firebase Token: {token}")  # ✅ Log the token
+
+    try:
+        decoded_token = auth.verify_id_token(token)  # Ensure `auth` is from firebase_admin.auth
+        firebase_uid = decoded_token["uid"]
+        email = decoded_token.get("email", "")
+
+        user, created = CustomUser.objects.get_or_create(
+            firebase_id=firebase_uid,
+            defaults={"email": email, "username": email.split("@")[0]},
+        )
+
+        return JsonResponse({"message": "User authenticated", "new_user": created})
+    except Exception as e:
+        print(f"❌ Firebase Auth Error: {e}")
+        return JsonResponse({"error": str(e)}, status=401)
+
 
 def random_activity(request):
     """Returns a random 'thing to do' from the database."""
