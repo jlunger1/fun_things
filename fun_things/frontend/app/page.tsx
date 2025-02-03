@@ -69,59 +69,62 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center bg-gray-100 p-6">
-      {/* HEADER */}
-      <header className="w-full max-w-4xl text-center my-6">
-        <h1 className="text-4xl font-bold text-gray-900">Fun Things To Do Near Me</h1>
-        <p className="text-gray-600 mt-2">Discover cool activities near you!</p>
+    <div className="min-h-screen flex flex-col items-center bg-gray-100 p-6 relative">
+      {/* ✅ Wrap all content in a div and apply `pointer-events-none` when modal is open */}
+      <div className={`w-full transition-opacity ${showAuthModal ? "pointer-events-none opacity-50" : "opacity-100"}`}>
+        {/* HEADER */}
+        <header className="w-full max-w-4xl text-center my-6">
+          <h1 className="text-4xl font-bold text-gray-900">Fun Things To Do Near Me</h1>
+          <p className="text-gray-600 mt-2">Discover cool activities near you!</p>
 
-        {/* NAVIGATION BUTTONS */}
-        <div className="flex justify-center gap-8 mt-4">
-          <button onClick={() => setView("home")} className="text-gray-700 hover:text-blue-600 transition">
-            <Home fontSize="large" />
-          </button>
-          <button onClick={() => handleProtectedClick("profile")} className="text-gray-700 hover:text-blue-600 transition">
-            <AccountCircle fontSize="large" />
-          </button>
-          <button onClick={() => handleProtectedClick("add")} className="text-gray-700 hover:text-blue-600 transition">
-            <AddBox fontSize="large" />
-          </button>
-        </div>
-      </header>
+          {/* NAVIGATION BUTTONS */}
+          <div className="flex justify-center gap-8 mt-4">
+            <button onClick={() => setView("home")} className="text-gray-700 hover:text-blue-600 transition">
+              <Home fontSize="large" />
+            </button>
+            <button onClick={() => handleProtectedClick("profile")} className="text-gray-700 hover:text-blue-600 transition">
+              <AccountCircle fontSize="large" />
+            </button>
+            <button onClick={() => handleProtectedClick("add")} className="text-gray-700 hover:text-blue-600 transition">
+              <AddBox fontSize="large" />
+            </button>
+          </div>
+        </header>
 
-      {/* VIEW SWITCHING */}
-      {view === "home" && (
-        <main className="w-full max-w-2xl flex flex-col items-center">
-          {loading ? (
-            <p className="text-gray-500 text-lg">Loading...</p>
-          ) : (
-            activity && (
-              <ThingCard
-                thing={activity}
-                onNextActivity={fetchRandomActivity}
-                isLoggedIn={isLoggedIn}
-                onRequireLogin={() => setShowAuthModal(true)}
-                showRegister={showAuthModal}
-              />
-            )
-          )}
-        </main>
-      )}
+        {/* VIEW SWITCHING */}
+        {view === "home" && (
+          <main className="w-full max-w-2xl flex flex-col items-center">
+            {loading ? (
+              <p className="text-gray-500 text-lg">Loading...</p>
+            ) : (
+              activity && (
+                <ThingCard
+                  thing={activity}
+                  onNextActivity={fetchRandomActivity}
+                  isLoggedIn={isLoggedIn}
+                  onRequireLogin={() => setShowAuthModal(true)}
+                  showRegister={showAuthModal}
+                />
+              )
+            )}
+          </main>
+        )}
 
-      {view === "profile" && <Profile onLogin={() => setShowAuthModal(true)} />}
-      {view === "add" && <AddContent />}
+        {view === "profile" && <Profile onLogin={() => setShowAuthModal(true)} />}
+        {view === "add" && <AddContent />}
 
-      {/* FirebaseAuth Modal for Login/Signup */}
+        {/* FOOTER */}
+        <footer className="mt-auto py-4 text-gray-500 text-sm">
+          Made with ❤️ by FunThingsToDoNearMe
+        </footer>
+      </div>
+
+      {/* ✅ FirebaseAuth Modal for Login/Signup */}
       {showAuthModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <FirebaseAuth onClose={() => setShowAuthModal(false)} onAuthSuccess={handleAuthSuccess} />
         </div>
       )}
-
-      {/* FOOTER */}
-      <footer className="mt-auto py-4 text-gray-500 text-sm">
-        Made with ❤️ by FunThingsToDoNearMe
-      </footer>
     </div>
   );
 }

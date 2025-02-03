@@ -19,11 +19,13 @@ from django.urls import path
 from fun_things.core.views import (
     random_activity, 
     register_or_login,
+    update_preference,
 )
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('core/random-activity/', random_activity, name='random_activity'),
     path('core/register-or-login/', register_or_login, name='register_or_login'),
+    path('core/update-preference/', update_preference, name='update_preference'),
 ]
 

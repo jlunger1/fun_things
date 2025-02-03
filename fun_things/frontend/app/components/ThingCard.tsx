@@ -1,7 +1,11 @@
+"use client";
+
 import { useState } from "react";
 import { Favorite, FavoriteBorder, ThumbUp, ThumbDown } from "@mui/icons-material";
-import { MdAccessible } from "react-icons/md"; // Accessibility icon
-import { FaPaw } from "react-icons/fa"; // White paw icon
+import { MdAccessible } from "react-icons/md";
+import { FaPaw } from "react-icons/fa";
+import { auth } from "../utils/firebase";
+import axios from "axios";
 
 interface Thing {
   image_url?: string;
@@ -15,24 +19,43 @@ interface Thing {
 interface ThingCardProps {
   thing: Thing;
   onNextActivity: () => void;
-  isLoggedIn: boolean;  
+  isLoggedIn: boolean;
   onRequireLogin: () => void;
-  showRegister: boolean; // New prop to disable description pop-up
+  showRegister: boolean;
 }
 
 export default function ThingCard({ thing, onNextActivity, isLoggedIn, onRequireLogin, showRegister }: ThingCardProps) {
   const [saved, setSaved] = useState(false);
 
-  const handleSave = () => {
+  const handleAction = async (action: "favorite" | "upvote" | "downvote") => {
     if (!isLoggedIn) {
-      onRequireLogin();
+      onRequireLogin(); // ✅ Open login modal if user is not logged in
       return;
     }
-    setSaved(!saved);
+
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      if (!token) throw new Error("User token not available");
+
+      const res = await axios.post(
+        "http://127.0.0.1:8000/core/update-preference/",
+        { action }, // ✅ Ensure proper payload structure
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      console.log("Preference updated:", res.data);
+      if (action === "favorite") setSaved(!saved);
+      if (action === "upvote" || action === "downvote") onNextActivity();
+    } catch (error) {
+      console.error("Error updating preference:", error);
+    }
   };
 
   return (
-    <div className="relative w-full max-w-3xl bg-white rounded-2xl shadow-lg overflow-hidden">
+    <div className={`relative w-full max-w-3xl bg-white rounded-2xl shadow-lg overflow-hidden ${showRegister ? "pointer-events-none opacity-50" : ""}`}>
+      {/* Image with Title Overlay & Icons */}
       <div className="relative w-full h-[50vh] md:h-[60vh]">
         {thing.image_url ? (
           <img
@@ -48,15 +71,21 @@ export default function ThingCard({ thing, onNextActivity, isLoggedIn, onRequire
 
         {/* Floating Icons - Top Right */}
         <div className="absolute top-4 right-4 flex flex-col items-center gap-5 z-20">
-          <button className="hover:scale-110 transition text-white drop-shadow-lg shadow-black" onClick={handleSave}>
+          {/* Favorite (Heart) Button */}
+          <button
+            className="hover:scale-110 transition text-white drop-shadow-lg shadow-black"
+            onClick={() => handleAction("favorite")}
+          >
             {saved ? <Favorite fontSize="large" className="drop-shadow-lg shadow-black" /> : <FavoriteBorder fontSize="large" className="drop-shadow-lg shadow-black" />}
           </button>
 
-          <button className="hover:scale-110 transition text-white drop-shadow-lg shadow-black" onClick={() => (!isLoggedIn ? onRequireLogin() : onNextActivity())}>
+          {/* Upvote Button */}
+          <button className="hover:scale-110 transition text-white drop-shadow-lg shadow-black" onClick={() => handleAction("upvote")}>
             <ThumbUp fontSize="large" className="drop-shadow-lg shadow-black" />
           </button>
 
-          <button className="hover:scale-110 transition text-white drop-shadow-lg shadow-black" onClick={() => (!isLoggedIn ? onRequireLogin() : onNextActivity())}>
+          {/* Downvote Button */}
+          <button className="hover:scale-110 transition text-white drop-shadow-lg shadow-black" onClick={() => handleAction("downvote")}>
             <ThumbDown fontSize="large" className="drop-shadow-lg shadow-black" />
           </button>
         </div>
@@ -78,14 +107,16 @@ export default function ThingCard({ thing, onNextActivity, isLoggedIn, onRequire
           </h2>
         </div>
 
-        {/* Description Overlay (Disabled When Register Modal is Open) */}
-        {!showRegister && (
-          <div className="absolute inset-y-0 left-0 w-2/3 bg-black/70 text-white opacity-0 hover:opacity-100 transition-opacity duration-300 flex items-center justify-center p-6 z-10">
-            <div className="max-h-[80%] overflow-y-auto text-left pr-4">
-              <p className="text-lg drop-shadow-lg shadow-black">{thing.description}</p>
-            </div>
+        {/* ✅ Description Overlay (Appears on Hover) */}
+        <div 
+          className={`absolute inset-y-0 left-0 w-2/3 bg-black/70 text-white transition-opacity duration-300 flex items-center justify-center p-6 z-10 ${
+            showRegister ? "opacity-0 pointer-events-none" : "opacity-0 hover:opacity-100"
+          }`}
+        >
+          <div className="max-h-[80%] overflow-y-auto text-left pr-4">
+            <p className="text-lg drop-shadow-lg shadow-black">{thing.description}</p>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );

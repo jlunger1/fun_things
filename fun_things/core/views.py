@@ -8,6 +8,7 @@ import firebase_admin
 from firebase_admin import auth
 from firebase_admin import credentials
 import os
+import json
 
 # get the absolute path of the current file
 dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -19,6 +20,75 @@ if not firebase_admin._apps:
     firebase_admin.initialize_app(cred)
 
 User = get_user_model()  # Reference CustomUser
+
+@csrf_exempt
+def update_preference(request):
+    """Updates user preferences for saved activities, thumbs up, or thumbs down."""
+    if request.method != "POST":
+        return JsonResponse({"error": "Invalid request"}, status=400)
+
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        return JsonResponse({"error": "Unauthorized"}, status=401)
+
+    token = auth_header.split("Bearer ")[1]
+
+    try:
+        # ✅ Verify Firebase token
+        decoded_token = auth.verify_id_token(token)
+        firebase_uid = decoded_token["uid"]
+
+        # ✅ Get User
+        user = CustomUser.objects.get(firebase_id=firebase_uid)
+
+        # ✅ Parse Request Data
+        data = json.loads(request.body)
+        activity_id = data.get("activity_id")
+        action = data.get("action")  # "save", "thumbs_up", or "thumbs_down"
+
+        if not activity_id or action not in ["save", "thumbs_up", "thumbs_down"]:
+            return JsonResponse({"error": "Invalid request parameters"}, status=400)
+
+        # ✅ Get Activity
+        try:
+            activity = NPSThingToDo.objects.get(id=activity_id)
+        except NPSThingToDo.DoesNotExist:
+            return JsonResponse({"error": "Activity not found"}, status=404)
+
+        # ✅ Perform Action
+        if action == "save":
+            if activity in user.saved_activities.all():
+                user.saved_activities.remove(activity)
+                message = "Activity removed from favorites"
+            else:
+                user.saved_activities.add(activity)
+                message = "Activity added to favorites"
+
+        elif action == "thumbs_up":
+            if activity in user.thumbs_up.all():
+                user.thumbs_up.remove(activity)
+                message = "Removed thumbs up"
+            else:
+                user.thumbs_up.add(activity)
+                user.thumbs_down.remove(activity)  # Remove thumbs
+        
+        elif action == "thumbs_down":
+            if activity in user.thumbs_down.all():
+                user.thumbs_down.remove(activity)
+                message = "Removed thumbs down"
+            else:
+                user.thumbs_down.add(activity)
+                user.thumbs_up.remove(activity)  # Remove thumbs up if it exists
+                message = "Added thumbs down"
+
+        # ✅ Save changes
+        user.save()
+        return JsonResponse({"message": message, "action": action, "activity_id": activity_id})
+
+    except CustomUser.DoesNotExist:
+        return JsonResponse({"error": "User not found"}, status=404)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
 
 
 @csrf_exempt
@@ -40,7 +110,6 @@ def register_or_login(request):
 
         user, created = CustomUser.objects.get_or_create(
             firebase_id=firebase_uid,
-            defaults={"email": email, "username": email.split("@")[0]},
         )
 
         return JsonResponse({"message": "User authenticated", "new_user": created})
