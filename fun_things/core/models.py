@@ -15,7 +15,7 @@ class CustomUser(AbstractUser):
     thumbs_down = models.ManyToManyField("NPSThingToDo", blank=True, related_name="disliked_by_users")
 
     def __str__(self):
-        return self.username
+        return self.firebase_id
 
 
 class NPSThingToDo(models.Model):

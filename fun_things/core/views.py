@@ -22,7 +22,39 @@ if not firebase_admin._apps:
 User = get_user_model()  # Reference CustomUser
 
 @csrf_exempt
+def get_user_favorites(request):
+    """Returns a list of activity IDs that the user has favorited."""
+    if request.method != "GET":
+        return JsonResponse({"error": "Invalid request"}, status=400)
+
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        return JsonResponse({"error": "Unauthorized"}, status=401)
+
+    token = auth_header.split("Bearer ")[1]
+
+    try:
+        # ✅ Verify Firebase token
+        decoded_token = auth.verify_id_token(token)
+        firebase_uid = decoded_token["uid"]
+
+        # ✅ Get User
+        user = CustomUser.objects.get(firebase_id=firebase_uid)
+
+        # ✅ Retrieve Favorited Activities
+        favorite_activities = user.saved_activities.values_list("id", flat=True)
+
+        return JsonResponse({"favorites": list(favorite_activities)})
+
+    except CustomUser.DoesNotExist:
+        return JsonResponse({"error": "User not found"}, status=404)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
+
+
+@csrf_exempt
 def update_preference(request):
+    print('attempting to update preferences')
     """Updates user preferences for saved activities, thumbs up, or thumbs down."""
     if request.method != "POST":
         return JsonResponse({"error": "Invalid request"}, status=400)
@@ -44,9 +76,9 @@ def update_preference(request):
         # ✅ Parse Request Data
         data = json.loads(request.body)
         activity_id = data.get("activity_id")
-        action = data.get("action")  # "save", "thumbs_up", or "thumbs_down"
+        action = data.get("action")  # "favorite", "upvote", "downvote"
 
-        if not activity_id or action not in ["save", "thumbs_up", "thumbs_down"]:
+        if not activity_id or action not in ["favorite", "upvote", "downvote"]:
             return JsonResponse({"error": "Invalid request parameters"}, status=400)
 
         # ✅ Get Activity
@@ -56,7 +88,7 @@ def update_preference(request):
             return JsonResponse({"error": "Activity not found"}, status=404)
 
         # ✅ Perform Action
-        if action == "save":
+        if action == "favorite":
             if activity in user.saved_activities.all():
                 user.saved_activities.remove(activity)
                 message = "Activity removed from favorites"
@@ -64,22 +96,15 @@ def update_preference(request):
                 user.saved_activities.add(activity)
                 message = "Activity added to favorites"
 
-        elif action == "thumbs_up":
-            if activity in user.thumbs_up.all():
-                user.thumbs_up.remove(activity)
-                message = "Removed thumbs up"
-            else:
+        elif action == "upvote":
                 user.thumbs_up.add(activity)
-                user.thumbs_down.remove(activity)  # Remove thumbs
-        
-        elif action == "thumbs_down":
-            if activity in user.thumbs_down.all():
                 user.thumbs_down.remove(activity)
-                message = "Removed thumbs down"
-            else:
+                message = "Activity upvoted"
+        
+        elif action == "downvote":
                 user.thumbs_down.add(activity)
-                user.thumbs_up.remove(activity)  # Remove thumbs up if it exists
-                message = "Added thumbs down"
+                user.thumbs_up.remove(activity)
+                message = "Activity downvoted"
 
         # ✅ Save changes
         user.save()
@@ -106,7 +131,6 @@ def register_or_login(request):
     try:
         decoded_token = auth.verify_id_token(token)  # Ensure `auth` is from firebase_admin.auth
         firebase_uid = decoded_token["uid"]
-        email = decoded_token.get("email", "")
 
         user, created = CustomUser.objects.get_or_create(
             firebase_id=firebase_uid,
@@ -128,7 +152,7 @@ def random_activity(request):
     activity = NPSThingToDo.objects.all()[random_index]
 
     response_data = {
-        "id": activity.nps_id,
+        "id": activity.id,
         "title": activity.title,
         "description": activity.description,
         "latitude": activity.latitude,

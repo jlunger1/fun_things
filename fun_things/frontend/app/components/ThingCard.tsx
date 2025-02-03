@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Favorite, FavoriteBorder, ThumbUp, ThumbDown } from "@mui/icons-material";
 import { MdAccessible } from "react-icons/md";
 import { FaPaw } from "react-icons/fa";
@@ -8,6 +8,7 @@ import { auth } from "../utils/firebase";
 import axios from "axios";
 
 interface Thing {
+  id: number;
   image_url?: string;
   title: string;
   url: string;
@@ -27,6 +28,29 @@ interface ThingCardProps {
 export default function ThingCard({ thing, onNextActivity, isLoggedIn, onRequireLogin, showRegister }: ThingCardProps) {
   const [saved, setSaved] = useState(false);
 
+  // ✅ Fetch user's favorite activities on mount
+  useEffect(() => {
+    const fetchFavorites = async () => {
+      if (!isLoggedIn) return;
+
+      try {
+        const token = await auth.currentUser?.getIdToken();
+        if (!token) throw new Error("User token not available");
+
+        const res = await axios.get("http://127.0.0.1:8000/core/get-user-favorites/", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        const favoriteIds: number[] = res.data.favorites;
+        setSaved(favoriteIds.includes(thing.id)); // ✅ Check if current thing is in favorites
+      } catch (error) {
+        console.error("Error fetching user favorites:", error);
+      }
+    };
+
+    fetchFavorites();
+  }, [isLoggedIn, thing.id]); // ✅ Refetch when login status or thing.id changes
+
   const handleAction = async (action: "favorite" | "upvote" | "downvote") => {
     if (!isLoggedIn) {
       onRequireLogin(); // ✅ Open login modal if user is not logged in
@@ -39,10 +63,8 @@ export default function ThingCard({ thing, onNextActivity, isLoggedIn, onRequire
 
       const res = await axios.post(
         "http://127.0.0.1:8000/core/update-preference/",
-        { action }, // ✅ Ensure proper payload structure
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { activity_id: thing.id, action },
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
       console.log("Preference updated:", res.data);

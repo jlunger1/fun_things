@@ -74,7 +74,7 @@ export default function HomePage() {
       <div className={`w-full transition-opacity ${showAuthModal ? "pointer-events-none opacity-50" : "opacity-100"}`}>
         {/* HEADER */}
         <header className="w-full max-w-4xl text-center my-6">
-          <h1 className="text-4xl font-bold text-gray-900">Fun Things To Do Near Me</h1>
+          <h1 className="text-4xl font-bold text-gray-900">Fun Things Near Me</h1>
           <p className="text-gray-600 mt-2">Discover cool activities near you!</p>
 
           {/* NAVIGATION BUTTONS */}
@@ -115,7 +115,7 @@ export default function HomePage() {
 
         {/* FOOTER */}
         <footer className="mt-auto py-4 text-gray-500 text-sm">
-          Made with ❤️ by FunThingsToDoNearMe
+          Made with ❤️ by FunThingsNearMe
         </footer>
       </div>
 
