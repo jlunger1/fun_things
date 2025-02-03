@@ -69,16 +69,17 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center bg-gray-100 p-6 relative">
-      {/* ✅ Wrap all content in a div and apply `pointer-events-none` when modal is open */}
-      <div className={`w-full transition-opacity ${showAuthModal ? "pointer-events-none opacity-50" : "opacity-100"}`}>
+    <div className="min-h-screen flex flex-col items-center bg-gray-100 px-4 md:px-8 lg:px-12 py-6 relative">
+      {/* ✅ Content Wrapper - Prevent Interaction When Modal is Open */}
+      <div className={`w-full max-w-5xl transition-opacity ${showAuthModal ? "pointer-events-none opacity-50" : "opacity-100"}`}>
+        
         {/* HEADER */}
-        <header className="w-full max-w-4xl text-center my-6">
+        <header className="w-full text-center my-6">
           <h1 className="text-4xl font-bold text-gray-900">Fun Things Near Me</h1>
-          <p className="text-gray-600 mt-2">Discover cool activities near you!</p>
+          <p className="text-gray-600 mt-2 text-lg">Discover cool activities near you!</p>
 
           {/* NAVIGATION BUTTONS */}
-          <div className="flex justify-center gap-8 mt-4">
+          <div className="flex justify-center gap-6 mt-4">
             <button onClick={() => setView("home")} className="text-gray-700 hover:text-blue-600 transition">
               <Home fontSize="large" />
             </button>
@@ -92,29 +93,31 @@ export default function HomePage() {
         </header>
 
         {/* VIEW SWITCHING */}
-        {view === "home" && (
-          <main className="w-full max-w-2xl flex flex-col items-center">
-            {loading ? (
-              <p className="text-gray-500 text-lg">Loading...</p>
-            ) : (
-              activity && (
-                <ThingCard
-                  thing={activity}
-                  onNextActivity={fetchRandomActivity}
-                  isLoggedIn={isLoggedIn}
-                  onRequireLogin={() => setShowAuthModal(true)}
-                  showRegister={showAuthModal}
-                />
-              )
-            )}
-          </main>
-        )}
+        <main className="w-full flex-grow flex flex-col items-center">
+          {view === "home" && (
+            <div className="w-full max-w-2xl">
+              {loading ? (
+                <p className="text-gray-500 text-lg text-center">Loading...</p>
+              ) : (
+                activity && (
+                  <ThingCard
+                    thing={activity}
+                    onNextActivity={fetchRandomActivity}
+                    isLoggedIn={isLoggedIn}
+                    onRequireLogin={() => setShowAuthModal(true)}
+                    showRegister={showAuthModal}
+                  />
+                )
+              )}
+            </div>
+          )}
 
-        {view === "profile" && <Profile onLogin={() => setShowAuthModal(true)} />}
-        {view === "add" && <AddContent />}
+          {view === "profile" && <Profile onLogin={() => setShowAuthModal(true)} />}
+          {view === "add" && <AddContent />}
+        </main>
 
         {/* FOOTER */}
-        <footer className="mt-auto py-4 text-gray-500 text-sm">
+        <footer className="mt-auto py-6 text-gray-500 text-sm text-center">
           Made with ❤️ by FunThingsNearMe
         </footer>
       </div>

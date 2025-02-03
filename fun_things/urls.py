@@ -21,6 +21,7 @@ from fun_things.core.views import (
     register_or_login,
     update_preference,
     get_user_favorites,
+    get_activity_details,
 )
 
 urlpatterns = [
@@ -29,5 +30,6 @@ urlpatterns = [
     path('core/register-or-login/', register_or_login, name='register_or_login'),
     path('core/update-preference/', update_preference, name='update_preference'),
     path('core/get-user-favorites/', get_user_favorites, name='get_user_favorites'),
+    path('core/get-activity-details/<int:activity_id>/', get_activity_details, name='get_activity_details'),
 ]
 

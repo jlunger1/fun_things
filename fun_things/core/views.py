@@ -169,3 +169,30 @@ def random_activity(request):
     }
 
     return JsonResponse(response_data)
+
+@csrf_exempt
+def get_activity_details(request, activity_id):
+    print('getting activity details')
+    """Returns full details of a specific activity given its ID."""
+    if request.method != "GET":
+        return JsonResponse({"error": "Invalid request"}, status=400)
+
+    try:
+        activity = NPSThingToDo.objects.get(id=activity_id)
+
+        response_data = {
+            "id": activity.id,
+            "title": activity.title,
+            "url": activity.url,
+            "image_url": activity.image_url,
+            "description": activity.description,
+            "accessibility": activity.accessibility,
+            "pets_allowed": activity.pets_allowed,
+        }
+
+        return JsonResponse(response_data)
+
+    except NPSThingToDo.DoesNotExist:
+        return JsonResponse({"error": "Activity not found"}, status=404)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
