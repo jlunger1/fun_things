@@ -1,16 +1,19 @@
 import random
 from django.http import JsonResponse
-from fun_things.core.models import NPSThingToDo, CustomUser
-
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth import get_user_model
 import firebase_admin
-from firebase_admin import auth
-from firebase_admin import credentials
+from firebase_admin import auth, credentials
 import os
 import json
 
-from fun_things.core.recommenders import RandomRecommender, DistanceRecommender
+from fun_things.core.models import NPSThingToDo, CustomUser
+from fun_things.core.serializers import NPSThingToDoSerializer
+from fun_things.core.recommenders import DistanceRecommender
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
+from django.conf import settings
+import urllib.parse
 
 # get the absolute path of the current file
 dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -25,7 +28,38 @@ User = get_user_model()  # Reference CustomUser
 
 @csrf_exempt
 def get_user_favorites(request):
-    """Returns a list of activity IDs that the user has favorited."""
+    """Returns a list of favorited activities for the authenticated user."""
+    
+    # Get the Authorization header and validate it
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        return JsonResponse({"error": "Unauthorized"}, status=401)
+
+    token = auth_header.split("Bearer ")[1]
+
+    try:
+        # Verify Firebase token and get user
+        decoded_token = auth.verify_id_token(token)
+        firebase_uid = decoded_token["uid"]
+        user = CustomUser.objects.get(firebase_id=firebase_uid)
+
+        # Ensure `saved_activities` is correctly referenced
+        if hasattr(user, "saved_activities"):
+            favorites_queryset = user.saved_activities.all()
+            favorites_data = NPSThingToDoSerializer(favorites_queryset, many=True).data
+            return JsonResponse({"favorites": favorites_data})
+        else:
+            return JsonResponse({"error": "User has no saved activities"}, status=404)
+
+    except CustomUser.DoesNotExist:
+        return JsonResponse({"error": "User not found"}, status=404)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
+
+@csrf_exempt
+def get_user_created(request):
+    """Returns a list of created activities for the authenticated user."""
+    
     if request.method != "GET":
         return JsonResponse({"error": "Invalid request"}, status=400)
 
@@ -36,17 +70,16 @@ def get_user_favorites(request):
     token = auth_header.split("Bearer ")[1]
 
     try:
-        # ✅ Verify Firebase token
+        # Authenticate the user
         decoded_token = auth.verify_id_token(token)
         firebase_uid = decoded_token["uid"]
-
-        # ✅ Get User
         user = CustomUser.objects.get(firebase_id=firebase_uid)
 
-        # ✅ Retrieve Favorited Activities
-        favorite_activities = user.saved_activities.values_list("id", flat=True)
-
-        return JsonResponse({"favorites": list(favorite_activities)})
+        # Fetch user's created activities
+        created_activities = NPSThingToDoSerializer(user.submitted_activities.all(), many=True).data
+        
+        # ✅ Fix the response key name
+        return JsonResponse({"created_activities": created_activities})
 
     except CustomUser.DoesNotExist:
         return JsonResponse({"error": "User not found"}, status=404)
@@ -56,7 +89,6 @@ def get_user_favorites(request):
 
 @csrf_exempt
 def update_preference(request):
-    print('attempting to update preferences')
     """Updates user preferences for saved activities, thumbs up, or thumbs down."""
     if request.method != "POST":
         return JsonResponse({"error": "Invalid request"}, status=400)
@@ -68,28 +100,19 @@ def update_preference(request):
     token = auth_header.split("Bearer ")[1]
 
     try:
-        # ✅ Verify Firebase token
         decoded_token = auth.verify_id_token(token)
         firebase_uid = decoded_token["uid"]
-
-        # ✅ Get User
         user = CustomUser.objects.get(firebase_id=firebase_uid)
 
-        # ✅ Parse Request Data
         data = json.loads(request.body)
         activity_id = data.get("activity_id")
-        action = data.get("action")  # "favorite", "upvote", "downvote"
+        action = data.get("action")
 
         if not activity_id or action not in ["favorite", "upvote", "downvote"]:
             return JsonResponse({"error": "Invalid request parameters"}, status=400)
 
-        # ✅ Get Activity
-        try:
-            activity = NPSThingToDo.objects.get(id=activity_id)
-        except NPSThingToDo.DoesNotExist:
-            return JsonResponse({"error": "Activity not found"}, status=404)
+        activity = NPSThingToDo.objects.get(id=activity_id)
 
-        # ✅ Perform Action
         if action == "favorite":
             if activity in user.saved_activities.all():
                 user.saved_activities.remove(activity)
@@ -99,28 +122,27 @@ def update_preference(request):
                 message = "Activity added to favorites"
 
         elif action == "upvote":
-                user.thumbs_up.add(activity)
-                user.thumbs_down.remove(activity)
-                message = "Activity upvoted"
-        
+            user.thumbs_up.add(activity)
+            user.thumbs_down.remove(activity)
+            message = "Activity upvoted"
+
         elif action == "downvote":
-                user.thumbs_down.add(activity)
-                user.thumbs_up.remove(activity)
-                message = "Activity downvoted"
+            user.thumbs_down.add(activity)
+            user.thumbs_up.remove(activity)
+            message = "Activity downvoted"
 
-        # ✅ Save changes
         user.save()
-        return JsonResponse({"message": message, "action": action, "activity_id": activity_id})
-
+        return JsonResponse({"message": message, "action": action, "activity": NPSThingToDoSerializer(activity).data})
     except CustomUser.DoesNotExist:
         return JsonResponse({"error": "User not found"}, status=404)
+    except NPSThingToDo.DoesNotExist:
+        return JsonResponse({"error": "Activity not found"}, status=404)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
 
-
 @csrf_exempt
 def register_or_login(request):
-    """Verifies Firebase token and registers/logs in the user in Django DB."""
+    """Verifies Firebase token and registers/logs in the user."""
     if request.method != "POST":
         return JsonResponse({"error": "Invalid request"}, status=400)
 
@@ -131,65 +153,99 @@ def register_or_login(request):
     token = auth_header.split("Bearer ")[1]
 
     try:
-        decoded_token = auth.verify_id_token(token)  # Ensure `auth` is from firebase_admin.auth
+        decoded_token = auth.verify_id_token(token)
         firebase_uid = decoded_token["uid"]
-
-        user, created = CustomUser.objects.get_or_create(
-            firebase_id=firebase_uid,
-        )
-
+        user, created = CustomUser.objects.get_or_create(firebase_id=firebase_uid)
         return JsonResponse({"message": "User authenticated", "new_user": created})
     except Exception as e:
-        print(f"❌ Firebase Auth Error: {e}")
         return JsonResponse({"error": str(e)}, status=401)
 
-
 def get_activity(request):
-
-    """Returns a random 'thing to do' from the database."""
-
-    # get latitude and longitude
+    """Returns a recommended 'thing to do' based on location."""
     lat = float(request.GET.get("latitude"))
     lon = float(request.GET.get("longitude"))
-
     recommender = DistanceRecommender()
     activity = recommender.recommend(latitude=lat, longitude=lon)
+    return JsonResponse(NPSThingToDoSerializer(activity).data)
 
-    response_data = {
-        "id": activity.id,
-        "title": activity.title,
-        "description": activity.description,
-        "url": activity.url,
-        "image_url": activity.image_url,
-        "accessibility": activity.accessibility,
-        "pets_allowed": activity.pets_allowed,
-    }
+@csrf_exempt
+def create_activity(request):
+    """Creates a new activity submitted by the user and associates it with their submitted activities."""
+    if request.method != "POST":
+        return JsonResponse({"error": "Invalid request"}, status=400)
 
-    return JsonResponse(response_data)
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        return JsonResponse({"error": "Unauthorized"}, status=401)
+
+    token = auth_header.split("Bearer ")[1]
+
+    try:
+        decoded_token = auth.verify_id_token(token)
+        firebase_uid = decoded_token["uid"]
+        user = CustomUser.objects.get(firebase_id=firebase_uid)
+
+        data = json.loads(request.body)
+        serializer = NPSThingToDoSerializer(data=data)
+        print(serializer)
+        print('serializer is valid', serializer.is_valid())
+        print('serializer errors', serializer.errors)
+
+        if serializer.is_valid():
+            activity = serializer.save()
+            user.submitted_activities.add(activity)
+            user.save()
+            return JsonResponse({"message": "Activity created successfully", "activity": serializer.data}, status=201)
+        else:
+            return JsonResponse({"error": serializer.errors}, status=400)
+    except CustomUser.DoesNotExist:
+        return JsonResponse({"error": "User not found"}, status=404)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
 
 @csrf_exempt
 def get_activity_details(request, activity_id):
-    print('getting activity details')
-    """Returns full details of a specific activity given its ID."""
+    """Returns details of a specific activity by ID."""
     if request.method != "GET":
         return JsonResponse({"error": "Invalid request"}, status=400)
 
     try:
         activity = NPSThingToDo.objects.get(id=activity_id)
-
-        response_data = {
-            "id": activity.id,
-            "title": activity.title,
-            "url": activity.url,
-            "image_url": activity.image_url,
-            "description": activity.description,
-            "accessibility": activity.accessibility,
-            "pets_allowed": activity.pets_allowed,
-        }
-
-        return JsonResponse(response_data)
-
+        return JsonResponse(NPSThingToDoSerializer(activity).data)
     except NPSThingToDo.DoesNotExist:
         return JsonResponse({"error": "Activity not found"}, status=404)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
+
+@csrf_exempt
+def upload_image(request):
+    """Stores an uploaded image locally and returns a properly formatted URL."""
+    if request.method != "POST":
+        return JsonResponse({"error": "Invalid request"}, status=400)
+
+    if "image" not in request.FILES:
+        return JsonResponse({"error": "No image provided"}, status=400)
+
+    try:
+        image = request.FILES["image"]
+        
+        # ✅ Ensure "activities" directory exists inside MEDIA_ROOT
+        activities_dir = os.path.join(settings.MEDIA_ROOT, "activities")
+        os.makedirs(activities_dir, exist_ok=True)  
+
+        # ✅ Normalize filename (remove spaces and special chars)
+        filename = image.name.replace(" ", "_")  # Replace spaces with underscores
+        filename = urllib.parse.quote(filename)  # URL-encode the filename
+        image_name = os.path.join("activities", filename)
+
+        # ✅ Save the file in /media/activities/
+        file_path = default_storage.save(image_name, ContentFile(image.read()))
+
+        # ✅ Generate a properly formatted URL
+        media_base_url = request.build_absolute_uri(settings.MEDIA_URL).rstrip("/")
+        full_image_url = f"{media_base_url}/{urllib.parse.quote(file_path)}"
+
+        return JsonResponse({"image_url": full_image_url, "image_path": file_path}, status=201)
+
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)

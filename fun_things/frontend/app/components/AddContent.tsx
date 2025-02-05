@@ -1,31 +1,47 @@
 "use client";
 
-import { useState } from "react";
-import axios from "axios";
+import { useState, useRef, useEffect } from "react";
 import { auth } from "../utils/firebase";
+import { loadGoogleMaps } from "../utils/loadGoogleMaps";
 import { MdAccessible } from "react-icons/md";
 import { FaPaw } from "react-icons/fa";
-import { ArrowUpward, Delete } from "@mui/icons-material"; // MUI icons
-import { FiEdit2 } from "react-icons/fi"; // Edit icon
+import { Favorite, FavoriteBorder, ThumbUp, ThumbDown } from "@mui/icons-material";
 
 export default function AddContent() {
   const [image, setImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [title, setTitle] = useState("");
-  const [url, setUrl] = useState("");
-  const [description, setDescription] = useState("");
+  const [url, setUrl] = useState(""); // ✅ URL field is here!
+  const [description, setDescription] = useState(""); // ✅ Description field is here!
   const [petsAllowed, setPetsAllowed] = useState(false);
   const [accessibility, setAccessibility] = useState(false);
-  const [step, setStep] = useState(1);
+  const [location, setLocation] = useState(""); 
+  const [saved, setSaved] = useState(false);
   const [, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  // ✅ Load Google Maps Places API for location autocomplete
+  useEffect(() => {
+    loadGoogleMaps(() => {
+      if (!inputRef.current) return;
+
+      const autocomplete = new google.maps.places.Autocomplete(inputRef.current);
+      autocomplete.addListener("place_changed", () => {
+        const place = autocomplete.getPlace();
+        if (place.formatted_address) {
+          setLocation(place.formatted_address);
+          if (inputRef.current) inputRef.current.value = place.formatted_address;
+        }
+      });
+    });
+  }, []);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
     if (file) {
       setImage(file);
       setImagePreview(URL.createObjectURL(file));
-      setStep(2);
     }
   };
 
@@ -34,159 +50,191 @@ export default function AddContent() {
     setMessage("");
 
     try {
-      const token = await auth.currentUser?.getIdToken();
-      if (!token) throw new Error("User not authenticated");
+        const token = await auth.currentUser?.getIdToken();
+        if (!token) throw new Error("User not authenticated");
 
-      const formData = new FormData();
-      formData.append("title", title);
-      formData.append("description", description);
-      formData.append("url", url);
-      formData.append("pets_allowed", petsAllowed.toString());
-      formData.append("accessibility", accessibility.toString());
-      if (image) formData.append("image", image);
+        let imageUrl = "";
+        if (image) {
+            try {
+                const formData = new FormData();
+                formData.append("image", image);
 
-      await axios.post("http://127.0.0.1:8000/core/add-activity/", formData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "multipart/form-data",
-        },
-      });
+                const uploadResponse = await fetch("http://127.0.0.1:8000/core/upload-image/", {
+                    method: "POST",
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                    body: formData,
+                });
 
-      setMessage("Activity submitted successfully!");
+                if (!uploadResponse.ok) {
+                    console.warn("Image upload failed, continuing without image.");
+                } else {
+                    const uploadData = await uploadResponse.json();
+                    imageUrl = uploadData.image_url;
+                }
+            } catch (uploadError) {
+                console.warn("Image upload error:", uploadError);
+            }
+        }
+
+        const data = {
+            title,
+            description,
+            url,
+            image_url: imageUrl,
+            accessibility: !!accessibility,
+            pets_allowed: !!petsAllowed,
+        };
+
+        const response = await fetch("http://127.0.0.1:8000/core/create-activity/", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify(data),
+        });
+
+        const result = await response.json();
+        if (response.ok) {
+            setMessage("Activity submitted successfully!");
+
+            // ✅ Clear form fields after submission
+            setTitle("");
+            setUrl("");
+            setDescription("");
+            setLocation("");
+            setPetsAllowed(false);
+            setAccessibility(false);
+            setImage(null);
+            setImagePreview(null);
+            setSaved(false);
+
+            // ✅ Reset file input manually
+            if (inputRef.current) {
+                inputRef.current.value = "";
+            }
+        } else {
+            setMessage(`Error: ${result.error}`);
+        }
     } catch (error) {
-      setMessage("Error submitting activity.");
-      console.error("Error:", error);
+        setMessage("Error submitting activity.");
+        console.error("Error:", error);
     }
 
     setLoading(false);
-  };
+};
 
-  const handleReset = () => {
-    setImage(null);
-    setImagePreview(null);
-    setTitle("");
-    setUrl("");
-    setDescription("");
-    setPetsAllowed(false);
-    setAccessibility(false);
-    setStep(1);
-    setMessage("");
-  };
 
   return (
-    <div className="w-full max-w-3xl bg-white p-6 rounded-lg shadow-lg relative">
-      {/* Centered Title */}
+    <div className="w-full max-w-2xl bg-white p-6 rounded-2xl shadow-lg">
       <h2 className="text-2xl font-bold text-gray-800 text-center">Create Your Activity</h2>
-
       {message && <p className="text-green-600 text-center mt-2">{message}</p>}
 
-      {!imagePreview ? (
-        <label htmlFor="image-upload" className="cursor-pointer flex flex-col items-center justify-center w-full h-[50vh] md:h-[60vh] bg-gray-200 rounded-lg shadow-md mt-6">
-          <div className="text-gray-500 text-lg">Click to add an image</div>
-          <input type="file" id="image-upload" accept="image/*" onChange={handleImageChange} className="hidden" />
-        </label>
-      ) : (
-        <>
-          <div className="relative w-full h-[50vh] md:h-[60vh] bg-gray-200 rounded-lg shadow-md mt-6 overflow-hidden">
-            <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+      {/* 🔹 ThingCard-Style Preview */}
+      <div className="relative w-full h-[45vh] md:h-[55vh] rounded-2xl overflow-hidden shadow-lg mt-6 bg-gray-300">
+        {imagePreview ? (
+          <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-gray-500">No Image Available</div>
+        )}
 
-            {(accessibility || petsAllowed) && (
-              <div className="absolute top-4 left-4 flex gap-3 text-white drop-shadow-lg z-20">
-                {petsAllowed && <FaPaw className="text-4xl" />}
-                {accessibility && <MdAccessible className="text-4xl" />}
-              </div>
-            )}
-
-            {title && (
-              <div className="absolute bottom-16 right-4 text-right">
-                <h2 className="text-white text-2xl font-bold inline-block">
-                  <a href={url || "#"} target="_blank" rel="noopener noreferrer" className="hover:underline">
-                    {title}
-                  </a>
-                </h2>
-                <button onClick={() => setStep(2)} className="ml-2 text-white">
-                  <FiEdit2 />
-                </button>
-              </div>
-            )}
-
-            {description && (
-              <div className="absolute inset-y-0 left-0 w-2/3 bg-black/70 text-white opacity-0 hover:opacity-100 transition-opacity duration-300 flex items-center justify-center p-6 z-10">
-                <p className="text-lg">{description}</p>
-                <button onClick={() => setStep(4)} className="absolute right-4 top-2 text-white">
-                  <FiEdit2 />
-                </button>
-              </div>
-            )}
-
-            <button onClick={handleReset} className="absolute bottom-4 right-4 p-3 bg-red-600 text-white rounded-full hover:bg-red-700">
-              <Delete />
-            </button>
+        {/* Floating Icons - Top Left (Pets & Accessibility) */}
+        {(petsAllowed || accessibility) && (
+          <div className="absolute top-4 left-4 flex gap-3 text-white drop-shadow-lg z-20">
+            {petsAllowed && <FaPaw className="text-4xl" />}
+            {accessibility && <MdAccessible className="text-4xl" />}
           </div>
+        )}
 
-          {/* Step-by-Step Forms (Only show until Additional Features appear) */}
-          {step >= 2 && step < 5 && (
-            <div className="mt-4 relative">
-              <input
-                type="text"
-                value={step === 2 ? title : step === 3 ? url : step === 4 ? description : ""}
-                onChange={(e) =>
-                  step === 2
-                    ? setTitle(e.target.value)
-                    : step === 3
-                    ? setUrl(e.target.value)
-                    : step === 4
-                    ? setDescription(e.target.value)
-                    : null
-                }
-                placeholder={
-                  step === 2
-                    ? "Enter title"
-                    : step === 3
-                    ? "Add a URL (optional)"
-                    : step === 4
-                    ? "Add a description..."
-                    : ""
-                }
-                className="w-full p-3 border rounded text-gray-900 pr-10"
-              />
-              <button
-                onClick={() => setStep(step + 1)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 p-2 text-gray-700 hover:text-blue-600 transition rounded-full"
-              >
-                <ArrowUpward />
-              </button>
-            </div>
+        {/* Floating Icons - Top Right (Heart & Thumbs Up/Down) */}
+        <div className="absolute top-4 right-4 flex flex-col items-center gap-5 z-20">
+          {/* Heart (Favorite) */}
+          <button className="hover:scale-110 transition text-white drop-shadow-lg" onClick={() => setSaved(!saved)}>
+            {saved ? <Favorite fontSize="large" /> : <FavoriteBorder fontSize="large" />}
+          </button>
+          {/* Thumbs Up */}
+          <button className="hover:scale-110 transition text-white drop-shadow-lg">
+            <ThumbUp fontSize="large" />
+          </button>
+          {/* Thumbs Down */}
+          <button className="hover:scale-110 transition text-white drop-shadow-lg">
+            <ThumbDown fontSize="large" />
+          </button>
+        </div>
+
+        {/* Title & Location Overlay */}
+        {(title || location) && (
+          <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/80 to-transparent p-4 z-20">
+            {title && (
+              <h2 className="text-white text-2xl font-bold">
+                <a href={url} target="_blank" rel="noopener noreferrer" className="hover:underline">
+                  {title}
+                </a>
+              </h2>
             )}
+            {location && <p className="text-white text-sm">{location}</p>}
+          </div>
+        )}
 
-            {/* Additional Features + Submit Button */}
-            {step === 5 && (
-            <div className="mt-4">
-              <label className="block font-bold text-gray-800">Additional Features</label>
-              <div className="flex gap-4 mt-2">
-              <label className="flex items-center gap-2">
-                <input type="checkbox" checked={petsAllowed} onChange={() => setPetsAllowed(!petsAllowed)} className="w-5 h-5" />
-                <span className="text-gray-800">Pets Allowed</span>
-              </label>
-              <label className="flex items-center gap-2">
-                <input type="checkbox" checked={accessibility} onChange={() => setAccessibility(!accessibility)} className="w-5 h-5" />
-                <span className="text-gray-800">Accessibile</span>
-              </label>
-              </div>
+        {/* Description Overlay (Appears on the Left Side Only) */}
+        {description && (
+          <div className="absolute inset-y-0 left-0 w-2/3 bg-black/70 text-white opacity-0 hover:opacity-100 transition-opacity duration-300 flex items-center justify-center p-6">
+            <p className="text-lg">{description}</p>
+          </div>
+        )}
+      </div>
 
-              {/* Submit Button (Shows up with Additional Features) */}
-              <div className="mt-6 flex justify-center">
-                <button
-                  onClick={handleSubmit}
-                  className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg transition"
-                >
-                  Submit
-                </button>
-              </div>
-            </div>
-          )}
-        </>
-      )}
+      {/* 🔹 Form Fields */}
+      <div className="mt-6 space-y-4">
+        {/* Image Upload */}
+        <label className="block">
+          <span className="text-gray-700">Upload an Image</span>
+          <input type="file" accept="image/*" onChange={handleImageChange} className="block w-full mt-1" />
+        </label>
+
+        {/* Title */}
+        <label className="block">
+          <span className="text-gray-700">Title</span>
+          <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full p-2 border rounded-md bg-gray-100 text-gray-900" placeholder="Enter title" />
+        </label>
+
+        {/* URL */}
+        <label className="block">
+          <span className="text-gray-700">URL</span>
+          <input type="text" value={url} onChange={(e) => setUrl(e.target.value)} className="w-full p-2 border rounded-md bg-gray-100 text-gray-900" placeholder="Enter a URL" />
+        </label>
+
+        {/* Location Input (Google Maps Autocomplete) */}
+        <label className="block">
+          <span className="text-gray-700">Location</span>
+          <input ref={inputRef} type="text" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Start typing a location..." className="w-full p-2 border rounded-md bg-gray-100 text-gray-900" />
+        </label>
+
+        {/* Description */}
+        <label className="block">
+          <span className="text-gray-700">Description</span>
+          <textarea value={description} onChange={(e) => setDescription(e.target.value)} className="w-full p-2 border rounded-md bg-gray-100 text-gray-900" placeholder="Enter description" rows={3} />
+        </label>
+
+        {/* Features */}
+                <div className="flex gap-4">
+          <label className="flex items-center gap-2">
+            <input type="checkbox" checked={petsAllowed} onChange={() => setPetsAllowed(!petsAllowed)} className="w-5 h-5" />
+            <span className="text-gray-800">Pets Allowed</span>
+          </label>
+          <label className="flex items-center gap-2">
+            <input type="checkbox" checked={accessibility} onChange={() => setAccessibility(!accessibility)} className="w-5 h-5" />
+            <span className="text-gray-800">Accessible</span>
+          </label>
+        </div>
+
+        {/* Submit Button */}
+        <div className="mt-6 flex justify-center">
+          <button onClick={handleSubmit} className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg">Submit</button>
+        </div>
+      </div>
     </div>
   );
 }

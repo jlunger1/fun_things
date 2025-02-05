@@ -20,11 +20,13 @@ interface Activity {
   hashtags?: string[];
   pets_allowed?: boolean;
   accessibility?: boolean;
+  fetchingNewActivity?: boolean;
 }
 
 export default function HomePage() {
   const [activity, setActivity] = useState<Activity | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [fetchingNewActivity, setFetchingNewActivity] = useState(false);
   const [view, setView] = useState("home");
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -50,13 +52,17 @@ export default function HomePage() {
   // ✅ Fetch activity only when location is available
   useEffect(() => {
     if (latitude && longitude) {
-      fetchActivity();
+      fetchActivity(true);
     }
   }, [latitude, longitude]); // 🔹 Only runs when location updates
 
   // ✅ Fetch an activity using the current location
-  const fetchActivity = async () => {
-    setLoading(true);
+  const fetchActivity = async (isInitialFetch = false) => {
+    if (isInitialFetch) {
+      setInitialLoading(true);
+    } else {
+      setFetchingNewActivity(true);
+    }
 
     if (!latitude || !longitude) {
       console.log("⏳ Waiting for location before fetching activity...");
@@ -72,7 +78,12 @@ export default function HomePage() {
     } catch (error) {
       console.error("❌ Error fetching activity:", error);
     }
-    setLoading(false);
+
+    if (isInitialFetch) {
+      setInitialLoading(false);
+    } else {
+      setFetchingNewActivity(false);
+    }
   };
 
   // Handles clicks that require login
@@ -124,13 +135,13 @@ export default function HomePage() {
         <main className="w-full flex-grow flex flex-col items-center">
           {view === "home" && (
             <div className="w-full max-w-2xl">
-              {loading || locationLoading ? (
+              {initialLoading || locationLoading ? (
                 <p className="text-gray-500 text-lg text-center">Loading... {locationLoading}</p>
               ) : (
                 activity && (
                   <ThingCard
                     thing={activity}
-                    onNextActivity={fetchActivity}
+                    onNextActivity={() => fetchActivity(false)}
                     isLoggedIn={isLoggedIn}
                     onRequireLogin={() => setShowAuthModal(true)}
                     showRegister={showAuthModal}
@@ -140,7 +151,7 @@ export default function HomePage() {
             </div>
           )}
 
-          {view === "profile" && <Profile onLogin={() => setShowAuthModal(true)} />}
+          {view === "profile" && <Profile />}
           {view === "add" && <AddContent />}
         </main>
 

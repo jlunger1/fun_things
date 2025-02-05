@@ -8,6 +8,7 @@ class CustomUser(AbstractUser):
     """Custom user model storing login, location, saved activities, and votes."""
     firebase_id = models.CharField(max_length=255, blank=True, null=True)
     saved_activities = models.ManyToManyField("NPSThingToDo", blank=True, related_name="saved_by_users")
+    submitted_activities = models.ManyToManyField("NPSThingToDo", blank=True, related_name="submitted_by_users")
     thumbs_up = models.ManyToManyField("NPSThingToDo", blank=True, related_name="liked_by_users")
     thumbs_down = models.ManyToManyField("NPSThingToDo", blank=True, related_name="disliked_by_users")
 
@@ -26,8 +27,9 @@ class NPSThingToDo(models.Model):
 
     location = gis_models.PointField(blank=True, null=True)  # Store as a PointField
 
-    accessibility = models.TextField(blank=True, null=True)
+    accessibility = models.BooleanField(default=False)
     pets_allowed = models.BooleanField(default=False)
+
 
     def __str__(self):
         return self.title

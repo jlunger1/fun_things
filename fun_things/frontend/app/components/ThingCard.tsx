@@ -113,12 +113,13 @@ export default function ThingCard({ thing, onNextActivity, isLoggedIn, onRequire
         </div>
 
         {/* Accessibility & Pets Icons */}
-        {(thing.pets_allowed || thing.accessibility) && (
+        {(Boolean(thing.pets_allowed) || Boolean(thing.accessibility)) && (
           <div className="absolute top-4 left-4 flex gap-3 text-white drop-shadow-lg shadow-black z-20">
-            {thing.pets_allowed && <FaPaw className="text-4xl drop-shadow-lg shadow-black" />}
-            {thing.accessibility && <MdAccessible className="text-4xl drop-shadow-lg shadow-black" />}
+            {Boolean(thing.pets_allowed) && <FaPaw className="text-4xl drop-shadow-lg shadow-black" />}
+            {Boolean(thing.accessibility) && <MdAccessible className="text-4xl drop-shadow-lg shadow-black" />}
           </div>
         )}
+
 
         {/* Title Overlay */}
         <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/80 to-transparent p-4 z-20">
