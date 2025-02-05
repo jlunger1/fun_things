@@ -9,6 +9,7 @@ import FirebaseAuth from "./components/FirebaseAuth";
 import { Home, AccountCircle, AddBox } from "@mui/icons-material";
 import { auth } from "./utils/firebase";
 import { useUserLocation } from "./hooks/useUserLocation"; // ✅ Location Hook
+import { useRouter, useSearchParams } from "next/navigation"; // ✅ Fix import
 
 interface Activity {
   id: number;
@@ -20,7 +21,6 @@ interface Activity {
   hashtags?: string[];
   pets_allowed?: boolean;
   accessibility?: boolean;
-  fetchingNewActivity?: boolean;
 }
 
 export default function HomePage() {
@@ -36,6 +36,12 @@ export default function HomePage() {
   const longitude = location?.longitude;
   const latitude = location?.latitude;
 
+  // ✅ URL Handling for `activity_id`
+  const searchParams = useSearchParams();
+  const activityIdFromURL = searchParams.get("activity_id");
+
+  const router = useRouter();
+
   // ✅ Check Firebase auth state
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
@@ -49,31 +55,35 @@ export default function HomePage() {
     getLocation(); // Request location on mount
   }, []);
 
-  // ✅ Fetch activity only when location is available
+  // ✅ Fetch activity when URL changes OR location is available
   useEffect(() => {
-    if (latitude && longitude) {
+    if (activityIdFromURL) {
+      fetchActivity(true, Number(activityIdFromURL)); // Fetch a specific activity
+    } else if (latitude && longitude) {
       fetchActivity(true);
     }
-  }, [latitude, longitude]); // 🔹 Only runs when location updates
+  }, [latitude, longitude, activityIdFromURL]); // 🔹 Runs when location OR URL changes
 
-  // ✅ Fetch an activity using the current location
-  const fetchActivity = async (isInitialFetch = false) => {
+  // ✅ Fetch activity
+  const fetchActivity = async (isInitialFetch = false, activityId?: number) => {
     if (isInitialFetch) {
       setInitialLoading(true);
     } else {
       setFetchingNewActivity(true);
     }
 
-    if (!latitude || !longitude) {
-      console.log("⏳ Waiting for location before fetching activity...");
-      return;
-    }
-
     try {
-      console.log("🌍 Fetching activity at:", { latitude, longitude });
-      const res = await axios.get<Activity>(
-        `http://127.0.0.1:8000/core/get-activity/?latitude=${latitude}&longitude=${longitude}`
-      );
+      let res;
+      if (activityId) {
+        console.log(`Fetching specific activity with ID: ${activityId}`);
+        res = await axios.get<Activity>(`http://127.0.0.1:8000/core/get-activity-details/${activityId}/`);
+      } else {
+        console.log("Fetching a random activity based on location.");
+        res = await axios.get<Activity>(
+          `http://127.0.0.1:8000/core/get-activity/?latitude=${latitude}&longitude=${longitude}`
+        );
+      }
+
       setActivity(res.data);
     } catch (error) {
       console.error("❌ Error fetching activity:", error);
@@ -86,7 +96,7 @@ export default function HomePage() {
     }
   };
 
-  // Handles clicks that require login
+  // ✅ Handles clicks that require login
   const handleProtectedClick = (viewName: string) => {
     if (!isLoggedIn) {
       setShowAuthModal(true);

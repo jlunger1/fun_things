@@ -6,6 +6,7 @@ import { MdAccessible } from "react-icons/md";
 import { FaPaw } from "react-icons/fa";
 import { auth } from "../utils/firebase";
 import axios from "axios";
+import { userRouter, useSearchParams} from "next/navigation"
 
 interface Thing {
   id: number;
