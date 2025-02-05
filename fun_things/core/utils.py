@@ -5,6 +5,7 @@ import re
 from dotenv import load_dotenv
 from tqdm import tqdm
 from django.db.utils import IntegrityError
+from django.contrib.gis.geos import Point
 
 # Load environment variables
 load_dotenv()
@@ -131,6 +132,19 @@ class NPSScraper:
             accessibility = thing.get("accessibilityInformation", "")
             accessibility = self.is_accessible(accessibility)
 
+            # Convert latitude and longitude to a PointField
+            latitude = thing.get("latitude")
+            longitude = thing.get("longitude")
+            location = None
+
+            if latitude and longitude:
+                try:
+                    latitude = float(latitude)
+                    longitude = float(longitude)
+                    location = Point(longitude, latitude)  # Longitude first in GEOS Point
+                except ValueError:
+                    print(f"Invalid lat/lon for {thing.get('title')}")
+
             try:
                 obj = NPSThingToDo.objects.create(
                     nps_id=str(thing_id),
@@ -138,22 +152,14 @@ class NPSScraper:
                     description=better_description,
                     url=thing.get("url", ""),
                     image_url=thing.get("images", [{}])[0].get("url", ""),
-                    latitude=thing.get("latitude") if thing.get("latitude") else None,
-                    longitude=thing.get("longitude") if thing.get("longitude") else None,
-                    tags=[tag for tag in thing.get("tags", [])],
-                    topics=[topic["name"] for topic in thing.get("topics", [])],
-                    activities=[activity["name"] for activity in thing.get("activities", [])],
-                    season=", ".join(thing.get("season", [])) if thing.get("season") else None,
-                    age_recommendation=thing.get("ageDescription", ""),
+                    location=location,  # Store as PointField
                     accessibility=accessibility,
                     pets_allowed=thing.get("arePetsPermitted", "").lower() == "true",
-                    raw_data=thing,
                 )
                 print(f"Added new thing to do: {thing.get('title')}")
             except IntegrityError as e:
                 print(f"Skipped duplicate thing to do: {thing.get('title')} (Error: {e})")
-
-
+                
 if __name__ == "__main__":
     scraper = NPSScraper()
     scraper.store_things_to_do()

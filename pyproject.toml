@@ -54,6 +54,9 @@ dependencies = [
     "uritemplate==4.1.1",
     "firebase==4.0.1",
     "firebase-admin==6.6.0",
+    "gdal==3.10.1",
+    "postgis==1.0.4",
+    "psycopg2-binary==2.9.10",
 ]
 
 [build-system]

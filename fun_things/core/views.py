@@ -10,6 +10,8 @@ from firebase_admin import credentials
 import os
 import json
 
+from fun_things.core.recommenders import RandomRecommender, DistanceRecommender
+
 # get the absolute path of the current file
 dir_path = os.path.dirname(os.path.realpath(__file__))
 FIREBASE_CREDENTIALS_PATH = os.path.join(dir_path, "fun-things-12caf-firebase-adminsdk-fbsvc-abf05155d3.json")
@@ -142,28 +144,23 @@ def register_or_login(request):
         return JsonResponse({"error": str(e)}, status=401)
 
 
-def random_activity(request):
-    """Returns a random 'thing to do' from the database."""
-    count = NPSThingToDo.objects.count()
-    if count == 0:
-        return JsonResponse({"error": "No activities available"}, status=404)
+def get_activity(request):
 
-    random_index = random.randint(0, count - 1)
-    activity = NPSThingToDo.objects.all()[random_index]
+    """Returns a random 'thing to do' from the database."""
+
+    # get latitude and longitude
+    lat = float(request.GET.get("latitude"))
+    lon = float(request.GET.get("longitude"))
+
+    recommender = DistanceRecommender()
+    activity = recommender.recommend(latitude=lat, longitude=lon)
 
     response_data = {
         "id": activity.id,
         "title": activity.title,
         "description": activity.description,
-        "latitude": activity.latitude,
-        "longitude": activity.longitude,
         "url": activity.url,
         "image_url": activity.image_url,
-        "tags": activity.tags,
-        "topics": activity.topics,
-        "activities": activity.activities,
-        "season": activity.season,
-        "age_recommendation": activity.age_recommendation,
         "accessibility": activity.accessibility,
         "pets_allowed": activity.pets_allowed,
     }

@@ -17,7 +17,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 from fun_things.core.views import (
-    random_activity, 
+    get_activity, 
     register_or_login,
     update_preference,
     get_user_favorites,
@@ -26,7 +26,7 @@ from fun_things.core.views import (
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('core/random-activity/', random_activity, name='random_activity'),
+    path('core/get-activity/', get_activity, name='get_activity'),
     path('core/register-or-login/', register_or_login, name='register_or_login'),
     path('core/update-preference/', update_preference, name='update_preference'),
     path('core/get-user-favorites/', get_user_favorites, name='get_user_favorites'),

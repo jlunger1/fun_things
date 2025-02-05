@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     'django_extensions',
     'corsheaders',
     'rest_framework_simplejwt',
+    'django.contrib.gis',
 ]
 
 MIDDLEWARE = [
@@ -98,8 +99,12 @@ WSGI_APPLICATION = 'fun_things.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.contrib.gis.db.backends.postgis',
+        'NAME': 'fun_things',
+        'USER': '',  # Leave empty if using local user authentication
+        'PASSWORD': '',
+        'HOST': 'localhost',
+        'PORT': '5432',
     }
 }
 

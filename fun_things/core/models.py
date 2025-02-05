@@ -1,11 +1,8 @@
 from django.db import models
 
-import requests
 from django.contrib.auth.models import AbstractUser
 from django.db import models
-
-from django.contrib.auth.models import AbstractUser, Group, Permission
-from django.db import models
+from django.contrib.gis.db import models as gis_models
 
 class CustomUser(AbstractUser):
     """Custom user model storing login, location, saved activities, and votes."""
@@ -27,19 +24,10 @@ class NPSThingToDo(models.Model):
     url = models.URLField(blank=True, null=True)
     image_url = models.URLField(blank=True, null=True)
 
-    latitude = models.FloatField(blank=True, null=True)
-    longitude = models.FloatField(blank=True, null=True)
+    location = gis_models.PointField(blank=True, null=True)  # Store as a PointField
 
-    tags = models.JSONField(default=list)  # Store tags as a list of strings
-    topics = models.JSONField(default=list)  # Store topics as a list of strings
-    activities = models.JSONField(default=list)  # Related activities
-
-    season = models.CharField(max_length=255, blank=True, null=True)
-    age_recommendation = models.CharField(max_length=50, blank=True, null=True)
     accessibility = models.TextField(blank=True, null=True)
     pets_allowed = models.BooleanField(default=False)
-
-    raw_data = models.JSONField()  # Store the full API response
 
     def __str__(self):
         return self.title
