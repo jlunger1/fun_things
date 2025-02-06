@@ -5,7 +5,6 @@ import { validateForm } from "../utils/formValidation";
 import { auth } from "../utils/firebase";
 import { useGoogleMaps } from "../hooks/useGoogleMaps";
 import { useImageUpload } from "../hooks/useImageUpload";
-import ImageUpload from "../utils/imageUpload";
 import ThingCard from "./ThingCard"; // ✅ Importing ThingCard for live preview
 
 export default function AddContent() {
@@ -20,8 +19,7 @@ export default function AddContent() {
   const [, setLoading] = useState(false);
 
   const { inputRef, locationCoords } = useGoogleMaps(setLocation); // ✅ Set location, not description
-  const { image, imagePreview, setImage, handleImageChange } = useImageUpload();
-  const [imagePreviewState, setImagePreview] = useState<string | null>(null);
+  const { image, imagePreview, handleImageChange, handleImageRemove, fileInputRef } = useImageUpload();
 
   const handleSubmit = async () => {
     setMessage("");
@@ -96,33 +94,31 @@ export default function AddContent() {
         if (response.ok) {
             setMessage("Activity submitted successfully!");
             
-            // ✅ Clear form fields after submission
+            // Clear form fields after submission
             setTitle("");
             setUrl("");
             setDescription("");
             setLocation("");
             setPetsAllowed(false);
             setAccessibility(false);
-            setImage(null);
-            setImagePreview(null); // ✅ Reset image preview
+            
+            // Clear image states
+            handleImageRemove();
 
-            // ✅ Reset file input manually
-            if (inputRef.current) {
-                inputRef.current.value = "";
+            // Reset file input manually
+            const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+            if (fileInput) {
+                fileInput.value = '';  // Clear the file input
             }
 
-            // ✅ Reset ThingCard preview image
-            setImagePreview("");
-
-            // Update ThingCard preview
+            // Update ThingCard preview with empty image
             liveThing.id = result.id;
-            liveThing.title = title;
-            liveThing.url = url;
-            liveThing.description = description;
-            liveThing.image_url = ""; // ✅ Blank out image after submission
-            liveThing.pets_allowed = petsAllowed;
-            liveThing.accessibility = accessibility;
-
+            liveThing.title = "";
+            liveThing.url = "";
+            liveThing.description = "";
+            liveThing.image_url = "";
+            liveThing.pets_allowed = false;
+            liveThing.accessibility = false;
         } else {
             setMessage(`Error: ${result.error}`);
         }
@@ -140,7 +136,7 @@ export default function AddContent() {
     title: title || "Untitled Activity", // Default text if empty
     url: url || "#",
     description: description || "No description yet.",
-    image_url: imagePreviewState || "", // ✅ Use preview state
+    image_url: imagePreview || "", // ✅ Use preview state
     pets_allowed: petsAllowed,
     accessibility: accessibility,
   };
@@ -161,8 +157,28 @@ export default function AddContent() {
         showRegister={false}
       />
 
-      {/* Image Upload */}
-      <ImageUpload handleImageChange={handleImageChange} imagePreview={imagePreviewState} />
+      <div className="mb-4">
+        <label className="block text-gray-700">Upload Image</label>
+        <div className="flex items-center gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            onChange={handleImageChange}
+            accept="image/*"
+            className="file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200"
+          />
+          {image && (
+            <button
+              onClick={handleImageRemove}
+              className="text-red-500 hover:text-red-700 text-xl"
+              type="button"
+              aria-label="Remove image"
+            >
+              ×
+            </button>
+          )}
+        </div>
+      </div>
 
       {/* Form Fields */}
       <label className="block">

@@ -11,12 +11,10 @@ import { useRouter, useSearchParams } from "next/navigation";
 
 interface Activity {
   id: number;
-  title: string;
-  description: string;
-  park_name?: string;
-  url: string;
   image_url?: string;
-  hashtags?: string[];
+  title: string;
+  url: string;
+  description: string;
   pets_allowed?: boolean;
   accessibility?: boolean;
 }
@@ -27,7 +25,7 @@ export default function HomePage() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  const { location, getLocation, error, loading: locationLoading } = useUserLocation();
+  const { location, error, getLocation } = useUserLocation();
   const longitude = location?.longitude;
   const latitude = location?.latitude;
   
@@ -57,11 +55,7 @@ export default function HomePage() {
   const fetchActivity = async (isInitialFetch = false, activityId?: number) => {
     setInitialLoading(isInitialFetch);
     try {
-      const res = activityId
-        ? await axios.get<Activity>(`http://127.0.0.1:8000/core/get-activity-details/${activityId}/`)
-        : await axios.get<Activity>(
-            `http://127.0.0.1:8000/core/get-activity/?latitude=${latitude}&longitude=${longitude}`
-          );
+      const res = await axios.get<Activity>(`http://127.0.0.1:8000/core/get-activity/?latitude=${latitude}&longitude=${longitude}`);
       setActivity(res.data);
     } catch (error) {
       console.error("❌ Error fetching activity:", error);
@@ -86,7 +80,6 @@ export default function HomePage() {
             {location ? `Discover cool activities near you!` : "Discover cool activities around the world!"}
           </p>
           {error && <p className="text-red-500 text-sm">{error}</p>}
-          {locationLoading && <p className="text-gray-500 text-sm">Getting your location...</p>}
           <div className="flex justify-center gap-6 mt-4">
             <button onClick={() => router.push("/home")} className="text-gray-700 hover:text-blue-600 transition">
               <Home fontSize="large" />
@@ -101,7 +94,7 @@ export default function HomePage() {
         </header>
 
         <main className="w-full flex-grow flex flex-col items-center">
-          {initialLoading || locationLoading ? (
+          {initialLoading || "" ? (
             <p className="text-gray-500 text-lg text-center">Loading...</p>
           ) : (
             activity && (

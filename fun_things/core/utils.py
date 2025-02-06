@@ -82,30 +82,33 @@ class NPSScraper:
             return original_text  # Fallback to original
         
     def is_accessible(self, original_text):
-        """Use GPT-4 to determine if accessible."""
+        """Use GPT-4 to determine if accessible. Returns boolean."""
         if not original_text:
-            return "No description available."
+            return False
 
         prompt = f"""
         Here is a description of accessibility:
         ---
         {original_text}
         ---
-        Is the activity accessible to all visitors? if yes answer "Yes", if no answer "No".
+        Based on this description, is the activity accessible to all visitors? Answer with exactly 'true' if yes, or 'false' if no.
+        Consider an activity accessible only if it can be accessed by visitors with mobility limitations.
         """
 
         try:
             response = openai.chat.completions.create(
                 model="gpt-4",
                 messages=[
-                    {"role": "system", "content": "You are an expert copywriter."},
+                    {"role": "system", "content": "You are an accessibility expert."},
                     {"role": "user", "content": prompt}
                 ],
                 max_tokens=500
             )
-            return response.choices[0].message.content.strip()
+            result = response.choices[0].message.content.strip().lower()
+            return result == 'true'
         except Exception as e:
             print(f"Error assessing accessibility: {e}")
+            return False
 
     def store_things_to_do(self):
         """Fetch and store 'things to do' with complete field mapping."""
