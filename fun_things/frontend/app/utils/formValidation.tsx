@@ -1,4 +1,11 @@
-export function validateForm({ title, url, description, location, locationCoords, image }: any) {
+export function validateForm({
+  title,
+  url,
+  description,
+  location,
+  locationCoords,
+  image,
+}: any) {
   const errors: Record<string, string> = {};
 
   if (!title.trim()) errors.title = "Title is required.";
@@ -8,9 +15,9 @@ export function validateForm({ title, url, description, location, locationCoords
     errors.url = "Invalid URL format. Must start with http:// or https://";
   }
   if (!description.trim()) errors.description = "Description is required.";
-  if (!location.trim() || !locationCoords) errors.location = "Please select a valid location.";
+  if (!location.trim() || !locationCoords)
+    errors.location = "Please select a valid location.";
   if (!image) errors.image = "Please upload an image.";
 
   return errors;
 }
-

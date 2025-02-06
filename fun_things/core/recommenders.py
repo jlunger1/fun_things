@@ -29,7 +29,7 @@ class RandomRecommender(BaseRecommender):
 class DistanceRecommender(BaseRecommender):
     """Recommender that selects activities weighted by proximity to the user."""
 
-    LAMBDA = 0.0003  # Controls how fast probability decays with distance
+    LAMBDA = 0.000003  # Controls how fast probability decays with distance
 
     def recommend(self, latitude: float, longitude: float) -> Optional[NPSThingToDo]:
         """Recommend an activity based on distance-weighted probabilities."""

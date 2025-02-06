@@ -15,8 +15,6 @@ interface Activity {
   title: string;
   url: string;
   description: string;
-  pets_allowed?: boolean;
-  accessibility?: boolean;
 }
 
 export default function HomePage() {
@@ -28,7 +26,7 @@ export default function HomePage() {
   const { location, error, getLocation } = useUserLocation();
   const longitude = location?.longitude;
   const latitude = location?.latitude;
-  
+
   const searchParams = useSearchParams();
   const activityIdFromURL = searchParams.get("activity_id");
   const router = useRouter();
@@ -55,7 +53,9 @@ export default function HomePage() {
   const fetchActivity = async (isInitialFetch = false, activityId?: number) => {
     setInitialLoading(isInitialFetch);
     try {
-      const res = await axios.get<Activity>(`http://127.0.0.1:8000/core/get-activity/?latitude=${latitude}&longitude=${longitude}`);
+      const res = await axios.get<Activity>(
+        `http://127.0.0.1:8000/core/get-activity/?latitude=${latitude}&longitude=${longitude}`,
+      );
       setActivity(res.data);
     } catch (error) {
       console.error("❌ Error fetching activity:", error);
@@ -75,19 +75,32 @@ export default function HomePage() {
     <div className="min-h-screen flex flex-col items-center bg-gray-100 px-4 md:px-8 lg:px-12 py-6 relative">
       <div className="w-full max-w-5xl">
         <header className="w-full text-center my-6">
-          <h1 className="text-4xl font-bold text-gray-900">Fun Things Near Me</h1>
+          <h1 className="text-4xl font-bold text-gray-900">
+            Fun Things Near Me
+          </h1>
           <p className="text-gray-600 mt-2 text-lg">
-            {location ? `Discover cool activities near you!` : "Discover cool activities around the world!"}
+            {location
+              ? `Discover cool activities near you!`
+              : "Discover cool activities around the world!"}
           </p>
           {error && <p className="text-red-500 text-sm">{error}</p>}
           <div className="flex justify-center gap-6 mt-4">
-            <button onClick={() => router.push("/home")} className="text-gray-700 hover:text-blue-600 transition">
+            <button
+              onClick={() => router.push("/home")}
+              className="text-gray-700 hover:text-blue-600 transition"
+            >
               <Home fontSize="large" />
             </button>
-            <button onClick={() => handleProtectedClick("/profile")} className="text-gray-700 hover:text-blue-600 transition">
+            <button
+              onClick={() => handleProtectedClick("/profile")}
+              className="text-gray-700 hover:text-blue-600 transition"
+            >
               <AccountCircle fontSize="large" />
             </button>
-            <button onClick={() => handleProtectedClick("/add_content")} className="text-gray-700 hover:text-blue-600 transition">
+            <button
+              onClick={() => handleProtectedClick("/add_content")}
+              className="text-gray-700 hover:text-blue-600 transition"
+            >
               <AddBox fontSize="large" />
             </button>
           </div>
@@ -109,12 +122,17 @@ export default function HomePage() {
           )}
         </main>
 
-        <footer className="mt-auto py-6 text-gray-500 text-sm text-center">Made with ❤️ by FunThingsNearMe</footer>
+        <footer className="mt-auto py-6 text-gray-500 text-sm text-center">
+          Made with ❤️ by FunThingsNearMe
+        </footer>
       </div>
 
       {showAuthModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <FirebaseAuth onClose={() => setShowAuthModal(false)} onAuthSuccess={() => setIsLoggedIn(true)} />
+          <FirebaseAuth
+            onClose={() => setShowAuthModal(false)}
+            onAuthSuccess={() => setIsLoggedIn(true)}
+          />
         </div>
       )}
     </div>

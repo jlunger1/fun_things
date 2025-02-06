@@ -8,15 +8,13 @@ import { FavoriteBorder, AddBox } from "@mui/icons-material";
 import LogoutIcon from "@mui/icons-material/Logout";
 import MiniActivityCard from "./MiniActivityCard";
 import { useRouter } from "next/navigation"; // ✅ Import useRouter
-import ThingCard, { Thing } from './ThingCard';
-import ExitToAppIcon from '@mui/icons-material/ExitToApp';
+import ThingCard, { Thing } from "./ThingCard";
+import ExitToAppIcon from "@mui/icons-material/ExitToApp";
 
 interface Activity {
   id: number;
   title: string;
   image_url?: string;
-  pets_allowed?: boolean;
-  accessibility?: boolean;
   url?: string;
   description: string;
 }
@@ -26,7 +24,9 @@ export default function Profile() {
   const [createdActivities, setCreatedActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [activeTab, setActiveTab] = useState<"favorites" | "created">("favorites");
+  const [activeTab, setActiveTab] = useState<"favorites" | "created">(
+    "favorites",
+  );
   const [selectedActivity, setSelectedActivity] = useState<Thing | null>(null);
 
   const router = useRouter(); // ✅ Initialize useRouter()
@@ -37,25 +37,40 @@ export default function Profile() {
         const token = await auth.currentUser?.getIdToken();
         if (!token) throw new Error("User token not available");
 
-        const favResponse = await axios.get("http://127.0.0.1:8000/core/get-user-favorites/", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const favResponse = await axios.get(
+          "http://127.0.0.1:8000/core/get-user-favorites/",
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          },
+        );
 
         if (favResponse.data && Array.isArray(favResponse.data.favorites)) {
           setFavorites(favResponse.data.favorites);
         } else {
-          console.error("Expected 'favorites' array but received:", favResponse.data);
+          console.error(
+            "Expected 'favorites' array but received:",
+            favResponse.data,
+          );
           setFavorites([]);
         }
 
-        const createdResponse = await axios.get("http://127.0.0.1:8000/core/get-user-created/", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const createdResponse = await axios.get(
+          "http://127.0.0.1:8000/core/get-user-created/",
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          },
+        );
 
-        if (createdResponse.data && Array.isArray(createdResponse.data.created_activities)) {
+        if (
+          createdResponse.data &&
+          Array.isArray(createdResponse.data.created_activities)
+        ) {
           setCreatedActivities(createdResponse.data.created_activities);
         } else {
-          console.error("Expected 'created_activities' array but received:", createdResponse.data);
+          console.error(
+            "Expected 'created_activities' array but received:",
+            createdResponse.data,
+          );
           setCreatedActivities([]);
         }
       } catch (err) {
@@ -88,7 +103,9 @@ export default function Profile() {
         <div className="flex justify-center border-b pb-2">
           <button
             className={`flex items-center gap-2 px-4 py-2 text-lg font-medium transition ${
-              activeTab === "favorites" ? "text-blue-600 border-b-2 border-blue-600" : "text-gray-500"
+              activeTab === "favorites"
+                ? "text-blue-600 border-b-2 border-blue-600"
+                : "text-gray-500"
             }`}
             onClick={() => setActiveTab("favorites")}
           >
@@ -96,7 +113,9 @@ export default function Profile() {
           </button>
           <button
             className={`flex items-center gap-2 px-4 py-2 text-lg font-medium transition ${
-              activeTab === "created" ? "text-blue-600 border-b-2 border-blue-600" : "text-gray-500"
+              activeTab === "created"
+                ? "text-blue-600 border-b-2 border-blue-600"
+                : "text-gray-500"
             }`}
             onClick={() => setActiveTab("created")}
           >
@@ -109,13 +128,20 @@ export default function Profile() {
             {error ? (
               <p className="text-red-500 mt-4">{error}</p>
             ) : activeTab === "favorites" && favorites.length === 0 ? (
-              <p className="text-gray-500 mt-4">You haven't favorited any activities yet.</p>
+              <p className="text-gray-500 mt-4">
+                You haven't favorited any activities yet.
+              </p>
             ) : activeTab === "created" && createdActivities.length === 0 ? (
-              <p className="text-gray-500 mt-4">You haven't created any activities yet.</p>
+              <p className="text-gray-500 mt-4">
+                You haven't created any activities yet.
+              </p>
             ) : (
               <div className="mt-6 flex justify-center">
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                  {(activeTab === "favorites" ? favorites : createdActivities).map((activity) => (
+                  {(activeTab === "favorites"
+                    ? favorites
+                    : createdActivities
+                  ).map((activity) => (
                     <div
                       key={activity.id}
                       onClick={() => handleActivityClick(activity as Thing)}
@@ -147,17 +173,17 @@ export default function Profile() {
       {selectedActivity && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="relative max-w-2xl w-full">
-            <button 
+            <button
               onClick={() => setSelectedActivity(null)}
               className="absolute top-4 right-4 z-50 text-white hover:scale-110 transition drop-shadow-lg shadow-black"
               aria-label="Close"
             >
-              <ExitToAppIcon 
-                fontSize="large" 
+              <ExitToAppIcon
+                fontSize="large"
                 className="drop-shadow-lg shadow-black"
               />
             </button>
-            <ThingCard 
+            <ThingCard
               thing={selectedActivity}
               onNextActivity={handleNextActivity}
               isLoggedIn={true}

@@ -16,7 +16,7 @@ class NPSThingToDoSerializer(serializers.ModelSerializer):
     class Meta:
         model = NPSThingToDo
         fields = [
-            "id", "title", "url", "image_url", "pets_allowed", "accessibility",
+            "id", "title", "url", "image_url",
             "favorites_count", "thumbs_up_count", "thumbs_down_count",
             "description", "location", "location_input"
         ]

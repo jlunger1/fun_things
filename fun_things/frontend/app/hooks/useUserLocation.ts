@@ -13,7 +13,10 @@ interface UseUserLocationReturn {
 }
 
 export const useUserLocation = (): UseUserLocationReturn => {
-  const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [location, setLocation] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const getLocation = () => {
@@ -25,11 +28,11 @@ export const useUserLocation = (): UseUserLocationReturn => {
             longitude: position.coords.longitude,
           };
           setLocation(newLocation);
-          localStorage.setItem('userLocation', JSON.stringify(newLocation));
+          localStorage.setItem("userLocation", JSON.stringify(newLocation));
         },
         (error) => {
           setError(error.message);
-        }
+        },
       );
     } else {
       setError("Geolocation is not supported by your browser");
@@ -38,7 +41,7 @@ export const useUserLocation = (): UseUserLocationReturn => {
 
   useEffect(() => {
     // Try to get cached location first
-    const cachedLocation = localStorage.getItem('userLocation');
+    const cachedLocation = localStorage.getItem("userLocation");
     if (cachedLocation) {
       setLocation(JSON.parse(cachedLocation));
       return;
@@ -58,11 +61,11 @@ export const useUserLocation = (): UseUserLocationReturn => {
             longitude: position.coords.longitude,
           };
           setLocation(newLocation);
-          localStorage.setItem('userLocation', JSON.stringify(newLocation));
+          localStorage.setItem("userLocation", JSON.stringify(newLocation));
         },
         (error) => {
           setError(error.message);
-        }
+        },
       );
     }
   };

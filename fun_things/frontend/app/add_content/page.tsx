@@ -26,13 +26,22 @@ export default function AddContentPage() {
         <header className="w-full text-center my-6">
           {/* NAVIGATION BUTTONS */}
           <div className="flex justify-center gap-6 mt-4">
-            <button onClick={() => router.push("/home")} className="text-gray-700 hover:text-blue-600 transition">
+            <button
+              onClick={() => router.push("/home")}
+              className="text-gray-700 hover:text-blue-600 transition"
+            >
               <Home fontSize="large" />
             </button>
-            <button onClick={() => router.push("/profile")} className="text-gray-700 hover:text-blue-600 transition">
+            <button
+              onClick={() => router.push("/profile")}
+              className="text-gray-700 hover:text-blue-600 transition"
+            >
               <AccountCircle fontSize="large" />
             </button>
-            <button onClick={() => router.push("/add_content")} className="text-gray-700 hover:text-blue-600 transition">
+            <button
+              onClick={() => router.push("/add_content")}
+              className="text-gray-700 hover:text-blue-600 transition"
+            >
               <AddBox fontSize="large" />
             </button>
           </div>
@@ -53,12 +62,17 @@ export default function AddContentPage() {
         </main>
 
         {/* FOOTER */}
-        <footer className="mt-auto py-6 text-gray-500 text-sm text-center">Made with ❤️ by FunThingsNearMe</footer>
+        <footer className="mt-auto py-6 text-gray-500 text-sm text-center">
+          Made with ❤️ by FunThingsNearMe
+        </footer>
       </div>
 
       {showAuthModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <FirebaseAuth onClose={() => setShowAuthModal(false)} onAuthSuccess={() => setIsLoggedIn(true)} />
+          <FirebaseAuth
+            onClose={() => setShowAuthModal(false)}
+            onAuthSuccess={() => setIsLoggedIn(true)}
+          />
         </div>
       )}
     </div>

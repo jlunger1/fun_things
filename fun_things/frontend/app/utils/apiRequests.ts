@@ -28,10 +28,12 @@ export async function submitForm(data: any) {
 
   const response = await fetch("http://127.0.0.1:8000/core/create-activity/", {
     method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
     body: JSON.stringify(data),
   });
 
   return response;
 }
-

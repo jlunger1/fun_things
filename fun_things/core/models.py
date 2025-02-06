@@ -24,11 +24,7 @@ class NPSThingToDo(models.Model):
     description = models.TextField(blank=True, null=True)
     url = models.URLField(blank=True, null=True)
     image_url = models.URLField(blank=True, null=True)
-
     location = gis_models.PointField(blank=True, null=True)  # Store as a PointField
-
-    accessibility = models.BooleanField(default=False)
-    pets_allowed = models.BooleanField(default=False)
 
 
     def __str__(self):

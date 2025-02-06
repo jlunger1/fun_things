@@ -22,4 +22,3 @@ export const loadGoogleMaps = (callback: () => void) => {
   script.onload = callback;
   document.body.appendChild(script);
 };
-

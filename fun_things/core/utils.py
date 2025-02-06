@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from tqdm import tqdm
 from django.db.utils import IntegrityError
 from django.contrib.gis.geos import Point
+import time
 
 # Load environment variables
 load_dotenv()
@@ -26,17 +27,23 @@ class NPSScraper:
         self.headers = {"X-Api-Key": NPS_API_KEY}
         openai.api_key = OPENAI_API_KEY
 
-    def get_things_to_do(self, limit=10):
-        """Fetch 'things to do' from the NPS API."""
+    def get_things_to_do(self, limit=50, start=0):
+        """Fetch 'things to do' from the NPS API with pagination support."""
         url = f"{self.BASE_URL}/thingstodo"
-        params = {"limit": limit}
+        params = {
+            "limit": limit,
+            "start": start
+        }
         response = requests.get(url, headers=self.headers, params=params)
         
         if response.status_code == 200:
-            return response.json().get("data", [])
+            data = response.json()
+            # Ensure total is converted to int
+            total = int(data.get("total", 0))
+            return data.get("data", []), total
         else:
             print(f"Error fetching things to do: {response.status_code} - {response.text}")
-            return []
+            return [], 0
 
     def clean_description(self, text):
         """Cleans up unwanted characters from descriptions."""
@@ -81,88 +88,67 @@ class NPSScraper:
             print(f"Error rewriting description: {e}")
             return original_text  # Fallback to original
         
-    def is_accessible(self, original_text):
-        """Use GPT-4 to determine if accessible. Returns boolean."""
-        if not original_text:
-            return False
 
-        prompt = f"""
-        Here is a description of accessibility:
-        ---
-        {original_text}
-        ---
-        Based on this description, is the activity accessible to all visitors? Answer with exactly 'true' if yes, or 'false' if no.
-        Consider an activity accessible only if it can be accessed by visitors with mobility limitations.
-        """
-
-        try:
-            response = openai.chat.completions.create(
-                model="gpt-4",
-                messages=[
-                    {"role": "system", "content": "You are an accessibility expert."},
-                    {"role": "user", "content": prompt}
-                ],
-                max_tokens=500
-            )
-            result = response.choices[0].message.content.strip().lower()
-            return result == 'true'
-        except Exception as e:
-            print(f"Error assessing accessibility: {e}")
-            return False
-
-    def store_things_to_do(self):
-        """Fetch and store 'things to do' with complete field mapping."""
-        print('Fetching things to do...')
-        things_to_do = self.get_things_to_do()
-
-        print(f'Found {len(things_to_do)} things to do.')
-
-        for thing in tqdm(things_to_do, total=len(things_to_do)):
-            thing_id = thing.get("id")
-
-            if not thing_id:
-                print(f"Skipping due to missing ID for {thing.get('title')}")
-                continue
-
-            if NPSThingToDo.objects.filter(nps_id=str(thing_id)).exists():
-                print(f"Skipping existing thing to do: {thing.get('title')}")
-                continue
-
-            original_description = thing.get("longDescription", "")
-            better_description = self.rewrite_description(original_description)
-            better_description = self.clean_description(better_description)
-
-            accessibility = thing.get("accessibilityInformation", "")
-            accessibility = self.is_accessible(accessibility)
-
-            # Convert latitude and longitude to a PointField
-            latitude = thing.get("latitude")
-            longitude = thing.get("longitude")
-            location = None
-
-            if latitude and longitude:
-                try:
-                    latitude = float(latitude)
-                    longitude = float(longitude)
-                    location = Point(longitude, latitude)  # Longitude first in GEOS Point
-                except ValueError:
-                    print(f"Invalid lat/lon for {thing.get('title')}")
-
-            try:
-                obj = NPSThingToDo.objects.create(
-                    nps_id=str(thing_id),
-                    title=thing.get("title", "Unknown"),
-                    description=better_description,
-                    url=thing.get("url", ""),
-                    image_url=thing.get("images", [{}])[0].get("url", ""),
-                    location=location,  # Store as PointField
-                    accessibility=accessibility,
-                    pets_allowed=thing.get("arePetsPermitted", "").lower() == "true",
-                )
-                print(f"Added new thing to do: {thing.get('title')}")
-            except IntegrityError as e:
-                print(f"Skipped duplicate thing to do: {thing.get('title')} (Error: {e})")
+    def store_things_to_do(self, batch_size=50):
+        """Fetch and store all 'things to do' with pagination support."""
+        start = 0
+        total_items = None
+        
+        while total_items is None or start < int(total_items):
+            print(f'Fetching things to do (start: {start})...')
+            things_to_do, total_items = self.get_things_to_do(limit=batch_size, start=start)
+            
+            if not things_to_do:
+                break
                 
+            print(f'Found {len(things_to_do)} things to do (Total: {total_items})')
+
+            for thing in tqdm(things_to_do, total=len(things_to_do)):
+                thing_id = thing.get("id")
+
+                if not thing_id:
+                    print(f"Skipping due to missing ID for {thing.get('title')}")
+                    continue
+
+                if NPSThingToDo.objects.filter(nps_id=str(thing_id)).exists():
+                    print(f"Skipping existing thing to do: {thing.get('title')}")
+                    continue
+
+                original_description = thing.get("longDescription", "")
+                better_description = self.rewrite_description(original_description)
+                better_description = self.clean_description(better_description)
+
+                # Convert latitude and longitude to a PointField
+                latitude = thing.get("latitude")
+                longitude = thing.get("longitude")
+                location = None
+
+                if latitude and longitude:
+                    try:
+                        latitude = float(latitude)
+                        longitude = float(longitude)
+                        location = Point(longitude, latitude)  # Longitude first in GEOS Point
+                    except ValueError:
+                        print(f"Invalid lat/lon for {thing.get('title')}")
+
+                try:
+                    obj = NPSThingToDo.objects.create(
+                        nps_id=str(thing_id),
+                        title=thing.get("title", "Unknown"),
+                        description=better_description,
+                        url=thing.get("url", ""),
+                        image_url=thing.get("images", [{}])[0].get("url", ""),
+                        location=location,  # Store as PointField
+                    )
+                    print(f"Added new thing to do: {thing.get('title')}")
+                except IntegrityError as e:
+                    print(f"Skipped duplicate thing to do: {thing.get('title')} (Error: {e})")
+                
+            start += batch_size
+            
+            # Optional: Add a small delay to be nice to the API
+            time.sleep(1)
+
 if __name__ == "__main__":
     scraper = NPSScraper()
     scraper.store_things_to_do()

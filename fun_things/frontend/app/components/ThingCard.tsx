@@ -1,9 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Favorite, FavoriteBorder, ThumbUp, ThumbDown } from "@mui/icons-material";
-import { MdAccessible } from "react-icons/md";
-import { FaPaw } from "react-icons/fa";
+import {
+  Favorite,
+  FavoriteBorder,
+  ThumbUp,
+  ThumbDown,
+} from "@mui/icons-material";
 import { auth } from "../utils/firebase";
 import axios from "axios";
 
@@ -13,8 +16,6 @@ export interface Thing {
   title: string;
   url: string;
   description: string;
-  pets_allowed?: boolean;
-  accessibility?: boolean;
 }
 
 interface ThingCardProps {
@@ -25,7 +26,13 @@ interface ThingCardProps {
   showRegister: boolean;
 }
 
-export default function ThingCard({ thing, onNextActivity, isLoggedIn, onRequireLogin, showRegister }: ThingCardProps) {
+export default function ThingCard({
+  thing,
+  onNextActivity,
+  isLoggedIn,
+  onRequireLogin,
+  showRegister,
+}: ThingCardProps) {
   const [saved, setSaved] = useState(false);
 
   // ✅ Fetch user's favorite activities on mount
@@ -37,11 +44,16 @@ export default function ThingCard({ thing, onNextActivity, isLoggedIn, onRequire
         const token = await auth.currentUser?.getIdToken();
         if (!token) throw new Error("User token not available");
 
-        const res = await axios.get("http://127.0.0.1:8000/core/get-user-favorites/", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await axios.get(
+          "http://127.0.0.1:8000/core/get-user-favorites/",
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          },
+        );
 
-        const favoriteIds = res.data.favorites.map((favorite: Thing) => favorite.id);
+        const favoriteIds = res.data.favorites.map(
+          (favorite: Thing) => favorite.id,
+        );
         console.log("Favorite IDs:", favoriteIds);
         setSaved(favoriteIds.includes(thing.id)); // ✅ Check if current thing is in favorites
         console.log("Saved:", saved);
@@ -66,7 +78,7 @@ export default function ThingCard({ thing, onNextActivity, isLoggedIn, onRequire
       const res = await axios.post(
         "http://127.0.0.1:8000/core/update-preference/",
         { activity_id: thing.id, action },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${token}` } },
       );
 
       console.log("Preference updated:", res.data);
@@ -78,7 +90,9 @@ export default function ThingCard({ thing, onNextActivity, isLoggedIn, onRequire
   };
 
   return (
-    <div className={`relative w-full max-w-3xl bg-white rounded-2xl shadow-lg overflow-hidden ${showRegister ? "pointer-events-none opacity-50" : ""}`}>
+    <div
+      className={`relative w-full max-w-3xl bg-white rounded-2xl shadow-lg overflow-hidden ${showRegister ? "pointer-events-none opacity-50" : ""}`}
+    >
       {/* Image with Title Overlay & Icons */}
       <div className="relative w-full h-[50vh] md:h-[60vh]">
         {thing.image_url ? (
@@ -101,49 +115,64 @@ export default function ThingCard({ thing, onNextActivity, isLoggedIn, onRequire
             onClick={() => handleAction("favorite")}
           >
             {saved ? (
-              <Favorite fontSize="large" className="drop-shadow-lg shadow-black" />
+              <Favorite
+                fontSize="large"
+                className="drop-shadow-lg shadow-black"
+              />
             ) : (
-              <FavoriteBorder fontSize="large" className="drop-shadow-lg shadow-black" />
+              <FavoriteBorder
+                fontSize="large"
+                className="drop-shadow-lg shadow-black"
+              />
             )}
           </button>
 
           {/* Upvote Button */}
-          <button className="hover:scale-110 transition text-white drop-shadow-lg shadow-black" onClick={() => handleAction("upvote")}>
+          <button
+            className="hover:scale-110 transition text-white drop-shadow-lg shadow-black"
+            onClick={() => handleAction("upvote")}
+          >
             <ThumbUp fontSize="large" className="drop-shadow-lg shadow-black" />
           </button>
 
           {/* Downvote Button */}
-          <button className="hover:scale-110 transition text-white drop-shadow-lg shadow-black" onClick={() => handleAction("downvote")}>
-            <ThumbDown fontSize="large" className="drop-shadow-lg shadow-black" />
+          <button
+            className="hover:scale-110 transition text-white drop-shadow-lg shadow-black"
+            onClick={() => handleAction("downvote")}
+          >
+            <ThumbDown
+              fontSize="large"
+              className="drop-shadow-lg shadow-black"
+            />
           </button>
         </div>
-
-        {/* Accessibility & Pets Icons */}
-        {(Boolean(thing.pets_allowed) || Boolean(thing.accessibility)) && (
-          <div className="absolute top-4 left-4 flex gap-3 text-white drop-shadow-lg shadow-black z-20">
-            {Boolean(thing.pets_allowed) && <FaPaw className="text-4xl drop-shadow-lg shadow-black" />}
-            {Boolean(thing.accessibility) && <MdAccessible className="text-4xl drop-shadow-lg shadow-black" />}
-          </div>
-        )}
-
 
         {/* Title Overlay */}
         <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/80 to-transparent p-4 z-20">
           <h2 className="text-white text-2xl font-bold drop-shadow-lg shadow-black">
-            <a href={thing.url} target="_blank" rel="noopener noreferrer" className="hover:underline">
+            <a
+              href={thing.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:underline"
+            >
               {thing.title}
             </a>
           </h2>
         </div>
 
         {/* ✅ Description Overlay (Appears on Hover) */}
-        <div 
+        <div
           className={`absolute inset-y-0 left-0 w-2/3 bg-black/70 text-white transition-opacity duration-300 flex items-center justify-center p-6 z-10 ${
-            showRegister ? "opacity-0 pointer-events-none" : "opacity-0 hover:opacity-100"
+            showRegister
+              ? "opacity-0 pointer-events-none"
+              : "opacity-0 hover:opacity-100"
           }`}
         >
           <div className="max-h-[80%] overflow-y-auto text-left pr-4">
-            <p className="text-lg drop-shadow-lg shadow-black">{thing.description}</p>
+            <p className="text-lg drop-shadow-lg shadow-black">
+              {thing.description}
+            </p>
           </div>
         </div>
       </div>

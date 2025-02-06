@@ -16,26 +16,25 @@ export function useImageUpload() {
   const handleImageRemove = (e?: React.MouseEvent) => {
     // Prevent the click from bubbling up to parent elements
     e?.stopPropagation();
-    
+
     if (imagePreview) {
       URL.revokeObjectURL(imagePreview);
     }
-    
+
     setImage(null);
     setImagePreview(null);
-    
+
     // Reset the file input using the ref
     if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+      fileInputRef.current.value = "";
     }
   };
 
-  return { 
-    image, 
-    imagePreview, 
-    handleImageChange, 
+  return {
+    image,
+    imagePreview,
+    handleImageChange,
     handleImageRemove,
-    fileInputRef  // Export the ref to be used in the input element
+    fileInputRef, // Export the ref to be used in the input element
   };
 }
-
