@@ -1,4 +1,5 @@
-import { useRouter } from "next/navigation";
+"use client";
+
 import { MdAccessible } from "react-icons/md";
 import { FaPaw } from "react-icons/fa";
 

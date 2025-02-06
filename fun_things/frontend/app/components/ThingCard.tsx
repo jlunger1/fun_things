@@ -6,9 +6,8 @@ import { MdAccessible } from "react-icons/md";
 import { FaPaw } from "react-icons/fa";
 import { auth } from "../utils/firebase";
 import axios from "axios";
-import { userRouter, useSearchParams} from "next/navigation"
 
-interface Thing {
+export interface Thing {
   id: number;
   image_url?: string;
   title: string;
@@ -42,8 +41,10 @@ export default function ThingCard({ thing, onNextActivity, isLoggedIn, onRequire
           headers: { Authorization: `Bearer ${token}` },
         });
 
-        const favoriteIds: number[] = res.data.favorites;
+        const favoriteIds = res.data.favorites.map((favorite: Thing) => favorite.id);
+        console.log("Favorite IDs:", favoriteIds);
         setSaved(favoriteIds.includes(thing.id)); // ✅ Check if current thing is in favorites
+        console.log("Saved:", saved);
       } catch (error) {
         console.error("Error fetching user favorites:", error);
       }
@@ -93,13 +94,17 @@ export default function ThingCard({ thing, onNextActivity, isLoggedIn, onRequire
         )}
 
         {/* Floating Icons - Top Right */}
-        <div className="absolute top-4 right-4 flex flex-col items-center gap-5 z-20">
+        <div className="absolute top-16 right-4 flex flex-col items-center gap-5 z-20">
           {/* Favorite (Heart) Button */}
           <button
             className="hover:scale-110 transition text-white drop-shadow-lg shadow-black"
             onClick={() => handleAction("favorite")}
           >
-            {saved ? <Favorite fontSize="large" className="drop-shadow-lg shadow-black" /> : <FavoriteBorder fontSize="large" className="drop-shadow-lg shadow-black" />}
+            {saved ? (
+              <Favorite fontSize="large" className="drop-shadow-lg shadow-black" />
+            ) : (
+              <FavoriteBorder fontSize="large" className="drop-shadow-lg shadow-black" />
+            )}
           </button>
 
           {/* Upvote Button */}

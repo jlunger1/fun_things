@@ -1,6 +1,9 @@
 {
   "dependencies": {
+    "autoprefixer": "^10.4.20",
     "firebase": "^11.2.0",
-    "firebaseui": "^6.1.0"
+    "firebaseui": "^6.1.0",
+    "postcss": "^8.5.1",
+    "tailwindcss": "^4.0.4"
   }
 }

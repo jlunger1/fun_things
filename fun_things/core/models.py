@@ -19,7 +19,7 @@ class CustomUser(AbstractUser):
 class NPSThingToDo(models.Model):
     """Stores 'things to do' from the National Park Service API."""
 
-    nps_id = models.CharField(max_length=255, unique=True)
+    nps_id = models.CharField(max_length=255)
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
     url = models.URLField(blank=True, null=True)
