@@ -187,12 +187,13 @@ def create_activity(request):
 
         data = json.loads(request.body)
         serializer = NPSThingToDoSerializer(data=data)
-        print(serializer)
-        print('serializer is valid', serializer.is_valid())
-        print('serializer errors', serializer.errors)
+
+        print('data', data)
 
         if serializer.is_valid():
+            print('serializer is valid')
             activity = serializer.save()
+            print('serializer saved')
             user.submitted_activities.add(activity)
             user.save()
             return JsonResponse({"message": "Activity created successfully", "activity": serializer.data}, status=201)
