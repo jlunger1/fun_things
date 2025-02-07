@@ -63,7 +63,7 @@ export default function ProfilePage() {
 
         {/* FOOTER */}
         <footer className="mt-auto py-6 text-gray-500 text-sm text-center">
-          Made with ❤️ by FunThingsNearMe
+          Made with ❤️ by FunThingNearMe
         </footer>
       </div>
 

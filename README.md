@@ -1,6 +1,6 @@
 # fun_things
 
-Welcome to FunThingsToDoNearMe! fun_things is a web app which aids users in the discovery of fun things near them. The UI is very simple -- an activity is shown to the user who has the option to save, thumbs up, or thumbs down. 
+Welcome to FunThingToDoNearMe! fun_things is a web app which aids users in the discovery of fun things near them. The UI is very simple -- an activity is shown to the user who has the option to save, thumbs up, or thumbs down. 
 
 ## Setting up the environment
 

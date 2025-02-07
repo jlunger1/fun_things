@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import axios from "axios";
 import ThingCard from "@/app/components/ThingCard";
 import FirebaseAuth from "@/app/components/FirebaseAuth";
@@ -42,9 +42,6 @@ function HomePageContent() {
   const activityIdFromURL = searchParams.get("activity_id");
   const router = useRouter();
 
-  // Track whether fetching has already happened to prevent multiple fetches
-  const hasFetchedActivity = useRef(false);
-
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
       setIsLoggedIn(!!user);
@@ -53,24 +50,22 @@ function HomePageContent() {
   }, []);
 
   useEffect(() => {
-    const fetchLocation = async () => {
+    const fetchLocationAndActivity = async () => {
       setIsLoadingLocation(true);
       await getLocation();
       setIsLoadingLocation(false);
+      
+      // Only fetch activity after location is available
+      if (activityIdFromURL) {
+        fetchActivity(true, Number(activityIdFromURL));
+      } else if (latitude && longitude) {
+        fetchActivity(true);
+      }
     };
-    fetchLocation();
-  }, []);
-
-  useEffect(() => {
-    if (!isLoadingLocation && latitude && longitude && !hasFetchedActivity.current) {
-      hasFetchedActivity.current = true; // Prevent duplicate fetching
-      fetchActivity(true, activityIdFromURL ? Number(activityIdFromURL) : undefined);
-    }
-  }, [latitude, longitude, activityIdFromURL, isLoadingLocation]);
+    fetchLocationAndActivity();
+  }, [activityIdFromURL]); // Only re-run if activityIdFromURL changes
 
   const fetchActivity = async (isInitialFetch = false, activityId?: number) => {
-    if (!latitude || !longitude) return; // Ensure we do not fetch without valid location data
-
     setInitialLoading(isInitialFetch);
     try {
       const res = await axios.get<Activity>(
@@ -91,7 +86,7 @@ function HomePageContent() {
     }
   };
 
-  if (isLoadingLocation || !latitude || !longitude) {
+  if (isLoadingLocation) {
     return (
       <div className="w-full max-w-5xl flex items-center justify-center min-h-[50vh]">
         <p className="text-gray-500 text-lg">Getting your location...</p>
@@ -103,7 +98,7 @@ function HomePageContent() {
     <div className="w-full max-w-5xl">
       <header className="w-full text-center my-6">
         <h1 className="text-4xl font-bold text-gray-900">
-          Fun Thing Near Me
+          Fun Things Near Me
         </h1>
         <p className="text-gray-600 mt-2 text-lg">
           {location
@@ -134,7 +129,7 @@ function HomePageContent() {
       </header>
 
       <main className="w-full flex-grow flex flex-col items-center">
-        {initialLoading ? (
+        {initialLoading || "" ? (
           <p className="text-gray-500 text-lg text-center">Loading...</p>
         ) : (
           activity && (
