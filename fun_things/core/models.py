@@ -25,6 +25,7 @@ class NPSThingToDo(models.Model):
     url = models.URLField(blank=True, null=True)
     image_url = models.URLField(blank=True, null=True)
     location = gis_models.PointField(blank=True, null=True)  # Store as a PointField
+    passes_qc = models.BooleanField(default=False)
 
 
     def __str__(self):

@@ -24,7 +24,7 @@ class RandomRecommender(BaseRecommender):
             return None
         
         random_index = random.randint(0, count - 1)
-        return NPSThingToDo.objects.all()[random_index]
+        return NPSThingToDo.objects.filter(passes_qc=True)[random_index]
 
 class DistanceRecommender(BaseRecommender):
     """Recommender that selects activities weighted by proximity to the user."""
@@ -41,7 +41,7 @@ class DistanceRecommender(BaseRecommender):
         # Query database using Django ORM
         activities = (
             NPSThingToDo.objects
-            .filter(location__isnull=False)  # Ensure we have a valid location
+            .filter(location__isnull=False, passes_qc=True)  # Ensure we have a valid location
             .annotate(distance=Distance("location", user_location))  # Compute distance
             .order_by("distance")  # Sort results by proximity
         )

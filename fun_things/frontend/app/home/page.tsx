@@ -54,17 +54,16 @@ function HomePageContent() {
       setIsLoadingLocation(true);
       await getLocation();
       setIsLoadingLocation(false);
+      
+      // Only fetch activity after location is available
+      if (activityIdFromURL) {
+        fetchActivity(true, Number(activityIdFromURL));
+      } else if (latitude && longitude) {
+        fetchActivity(true);
+      }
     };
     fetchLocationAndActivity();
-  }, []);
-
-  useEffect(() => {
-    if (activityIdFromURL) {
-      fetchActivity(true, Number(activityIdFromURL));
-    } else if (latitude && longitude) {
-      fetchActivity(true);
-    }
-  }, [latitude, longitude, activityIdFromURL]);
+  }, [activityIdFromURL]); // Only re-run if activityIdFromURL changes
 
   const fetchActivity = async (isInitialFetch = false, activityId?: number) => {
     setInitialLoading(isInitialFetch);

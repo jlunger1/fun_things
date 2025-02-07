@@ -140,6 +140,7 @@ class NPSScraper:
                         url=thing.get("url", ""),
                         image_url=thing.get("images", [{}])[0].get("url", ""),
                         location=location,  # Store as PointField
+                        passes_qc=True
                     )
                     print(f"Added new thing to do: {thing.get('title')}")
                 except IntegrityError as e:
