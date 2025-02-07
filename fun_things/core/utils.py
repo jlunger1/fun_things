@@ -7,6 +7,7 @@ from tqdm import tqdm
 from django.db.utils import IntegrityError
 from django.contrib.gis.geos import Point
 import time
+import sys
 
 # Load environment variables
 load_dotenv()

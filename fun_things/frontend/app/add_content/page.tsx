@@ -27,7 +27,7 @@ export default function AddContentPage() {
           {/* NAVIGATION BUTTONS */}
           <div className="flex justify-center gap-6 mt-4">
             <button
-              onClick={() => router.push("/home")}
+              onClick={() => router.push("/")}
               className="text-gray-700 hover:text-blue-600 transition"
             >
               <Home fontSize="large" />
