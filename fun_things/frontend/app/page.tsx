@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import axios from "axios";
 import ThingCard from "@/app/components/ThingCard";
 import FirebaseAuth from "@/app/components/FirebaseAuth";
@@ -42,6 +42,9 @@ function HomePageContent() {
   const activityIdFromURL = searchParams.get("activity_id");
   const router = useRouter();
 
+  // Track whether fetching has already happened to prevent multiple fetches
+  const hasFetchedActivity = useRef(false);
+
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
       setIsLoggedIn(!!user);
@@ -50,25 +53,24 @@ function HomePageContent() {
   }, []);
 
   useEffect(() => {
-    const fetchLocationAndActivity = async () => {
+    const fetchLocation = async () => {
       setIsLoadingLocation(true);
       await getLocation();
       setIsLoadingLocation(false);
     };
-    fetchLocationAndActivity();
+    fetchLocation();
   }, []);
 
   useEffect(() => {
-    if (!isLoadingLocation) {
-      if (activityIdFromURL) {
-        fetchActivity(true, Number(activityIdFromURL));
-      } else if (latitude && longitude) {
-        fetchActivity(true);
-      }
+    if (!isLoadingLocation && latitude && longitude && !hasFetchedActivity.current) {
+      hasFetchedActivity.current = true; // Prevent duplicate fetching
+      fetchActivity(true, activityIdFromURL ? Number(activityIdFromURL) : undefined);
     }
   }, [latitude, longitude, activityIdFromURL, isLoadingLocation]);
 
   const fetchActivity = async (isInitialFetch = false, activityId?: number) => {
+    if (!latitude || !longitude) return; // Ensure we do not fetch without valid location data
+
     setInitialLoading(isInitialFetch);
     try {
       const res = await axios.get<Activity>(
@@ -89,7 +91,7 @@ function HomePageContent() {
     }
   };
 
-  if (isLoadingLocation) {
+  if (isLoadingLocation || !latitude || !longitude) {
     return (
       <div className="w-full max-w-5xl flex items-center justify-center min-h-[50vh]">
         <p className="text-gray-500 text-lg">Getting your location...</p>
@@ -132,7 +134,7 @@ function HomePageContent() {
       </header>
 
       <main className="w-full flex-grow flex flex-col items-center">
-        {(initialLoading || isLoadingLocation) ? (
+        {initialLoading ? (
           <p className="text-gray-500 text-lg text-center">Loading...</p>
         ) : (
           activity && (
