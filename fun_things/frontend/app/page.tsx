@@ -59,12 +59,14 @@ function HomePageContent() {
   }, []);
 
   useEffect(() => {
-    if (activityIdFromURL) {
-      fetchActivity(true, Number(activityIdFromURL));
-    } else if (latitude && longitude) {
-      fetchActivity(true);
+    if (!isLoadingLocation) {
+      if (activityIdFromURL) {
+        fetchActivity(true, Number(activityIdFromURL));
+      } else if (latitude && longitude) {
+        fetchActivity(true);
+      }
     }
-  }, [latitude, longitude, activityIdFromURL]);
+  }, [latitude, longitude, activityIdFromURL, isLoadingLocation]);
 
   const fetchActivity = async (isInitialFetch = false, activityId?: number) => {
     setInitialLoading(isInitialFetch);
@@ -130,7 +132,7 @@ function HomePageContent() {
       </header>
 
       <main className="w-full flex-grow flex flex-col items-center">
-        {initialLoading || "" ? (
+        {(initialLoading || isLoadingLocation) ? (
           <p className="text-gray-500 text-lg text-center">Loading...</p>
         ) : (
           activity && (
