@@ -106,9 +106,7 @@ function HomePageContent() {
           Fun Thing Near Me
         </h1>
         <p className="text-gray-600 mt-2 text-lg">
-          {location
-            ? `Discover cool activities near you!`
-            : "Discover cool activities around the world!"}
+          Discover something cool near you!
         </p>
         {error && <p className="text-red-500 text-sm">{error}</p>}
         <div className="flex justify-center gap-6 mt-4">
@@ -150,7 +148,7 @@ function HomePageContent() {
       </main>
 
       <footer className="mt-auto py-6 text-gray-500 text-sm text-center">
-        Made with ❤️ by FunThingNearMe
+        Made with ❤️ by FunThing
       </footer>
 
       {showAuthModal && (
